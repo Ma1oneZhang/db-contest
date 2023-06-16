@@ -1,2 +1,2 @@
-#set(SOURCES log.h)
-#add_library(utils STATIC ${SOURCES})
+set(SOURCES ConcurrencyMap.cpp)
+add_library(utils STATIC ${SOURCES})
