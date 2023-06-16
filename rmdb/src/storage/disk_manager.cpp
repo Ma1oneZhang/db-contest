@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "defs.h"
 #include "errors.h"
+#include <utils/log.h>
 
 DiskManager::DiskManager() : openList_(MAX_FD, 0) { memset(fd2pageno_, 0, MAX_FD * (sizeof(std::atomic<page_id_t>) / sizeof(char))); }
 
