@@ -495,7 +495,6 @@ TEST(StorageTest, SimpleTest) {
 		}
 	}
 	check_disk_all();
-	LOG_INFO("HERE")
 	for (int r = 0; r < 10000; r++) {
 		int fd = rand_fd();
 		int page_no = rand() % MAX_PAGES;
@@ -534,7 +533,6 @@ TEST(StorageTest, SimpleTest) {
 		check_cache(fd, page_no);
 	}
 	check_cache_all();
-	LOG_INFO("HERE")
 	for (auto &entry: fd2name) {
 		int fd = entry.first;
 		buffer_pool_manager->flush_all_pages(fd);

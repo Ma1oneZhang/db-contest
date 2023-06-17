@@ -9,10 +9,10 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-Wall -O0 -g -ggdb3")
 # set(CMAKE_CXX_FLAGS "-Wall -O3")
 
+#
 #-fsanitize=address
-#-fsanitize=address
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g ")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g ")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -O0 -g -fsanitize=thread")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -O0 -g -fsanitize=thread")
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 enable_testing()

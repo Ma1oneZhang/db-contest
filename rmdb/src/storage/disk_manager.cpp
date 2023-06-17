@@ -37,15 +37,6 @@ void DiskManager::write_page(int fd, page_id_t page_no, const char *offset, int 
 	// 2.调用write()函数
 	// 注意write返回值与num_bytes不等时 throw InternalError("DiskManager::write_page Error");
 	if (lseek(fd, page_no * PAGE_SIZE, SEEK_SET) == -1) {
-		if (errno == EBADF) {
-			LOG_INFO("EBADF")
-		} else if (errno == EINVAL) {
-			LOG_INFO("EINVAL")
-		} else if (EOVERFLOW == errno) {
-			LOG_INFO("EOVERFLOW")
-		} else if (ESPIPE == errno) {
-			LOG_INFO("ESPIPE")
-		}
 		throw InternalError("DiskManager::write_page lseeking Error");
 	}
 	if (write(fd, offset, num_bytes) != num_bytes) {
@@ -190,6 +181,9 @@ void DiskManager::close_file(int fd) {
 	if (!openList_[fd]) {
 		return;
 	}
+	auto path = fd2path_[fd];
+	path2fd_.erase(path);
+	fd2path_.erase(fd);
 	openList_[fd] = false;
 	assert(!close(fd));
 }

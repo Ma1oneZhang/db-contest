@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "common/config.h"
 #include <cstring>
+#include <mutex>
 
 /**
  * @description: 存储层每个Page的id的声明
@@ -71,6 +72,7 @@ public:
 	inline lsn_t get_page_lsn() { return *reinterpret_cast<lsn_t *>(get_data() + OFFSET_LSN); }
 
 	inline void set_page_lsn(lsn_t page_lsn) { memcpy(get_data() + OFFSET_LSN, &page_lsn, sizeof(lsn_t)); }
+	std::mutex mu;
 
 private:
 	void reset_memory() { memset(data_, OFFSET_PAGE_START, PAGE_SIZE); }// 将data_的PAGE_SIZE个字节填充为0
