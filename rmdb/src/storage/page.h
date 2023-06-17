@@ -63,6 +63,7 @@ public:
 
 	bool is_dirty() const { return is_dirty_; }
 
+	inline void set_page_id(PageId page_id) { this->id_ = page_id; }
 	static constexpr size_t OFFSET_PAGE_START = 0;
 	static constexpr size_t OFFSET_LSN = 0;
 	static constexpr size_t OFFSET_PAGE_HDR = 4;

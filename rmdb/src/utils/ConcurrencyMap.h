@@ -1,6 +1,7 @@
 #ifndef CONCURRENCY_MAP_H
 #define CONCURRENCY_MAP_H
 
+#include "utils/log.h"
 #include <mutex>
 #include <unordered_map>
 

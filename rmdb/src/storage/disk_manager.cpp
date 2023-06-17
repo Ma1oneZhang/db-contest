@@ -11,7 +11,9 @@ See the Mulan PSL v2 for more details. */
 #include "storage/disk_manager.h"
 
 #include <asm-generic/errno-base.h>
-#include <assert.h>  // for assert
+#include <asm-generic/errno.h>
+#include <assert.h>// for assert
+#include <cerrno>
 #include <string.h>  // for memset
 #include <sys/stat.h>// for stat
 #include <unistd.h>  // for lseek
@@ -34,8 +36,17 @@ void DiskManager::write_page(int fd, page_id_t page_no, const char *offset, int 
 	// 1.lseek()定位到文件头，通过(fd,page_no)可以定位指定页面及其在磁盘文件中的偏移量
 	// 2.调用write()函数
 	// 注意write返回值与num_bytes不等时 throw InternalError("DiskManager::write_page Error");
-	if (lseek(fd, page_no * PAGE_SIZE, SEEK_SET)) {
-		throw InternalError("DiskManager::read_page Error");
+	if (lseek(fd, page_no * PAGE_SIZE, SEEK_SET) == -1) {
+		if (errno == EBADF) {
+			LOG_INFO("EBADF")
+		} else if (errno == EINVAL) {
+			LOG_INFO("EINVAL")
+		} else if (EOVERFLOW == errno) {
+			LOG_INFO("EOVERFLOW")
+		} else if (ESPIPE == errno) {
+			LOG_INFO("ESPIPE")
+		}
+		throw InternalError("DiskManager::write_page lseeking Error");
 	}
 	if (write(fd, offset, num_bytes) != num_bytes) {
 		throw InternalError("DiskManager::write_page Error");
@@ -55,10 +66,12 @@ void DiskManager::read_page(int fd, page_id_t page_no, char *offset, int num_byt
 	// 2.调用read()函数
 	// 注意read返回值与num_bytes不等时，throw InternalError("DiskManager::read_page Error");
 	if (lseek(fd, page_no * PAGE_SIZE, SEEK_SET) == -1) {
-		throw InternalError("DiskManager::read_page Error");
+		throw InternalError("seeking on the DiskManager::read_page Error");
 	}
-	if (read(fd, offset, num_bytes) != num_bytes) {
-		throw InternalError("DiskManager::read_page Error");
+	size_t size;
+	if ((size = read(fd, offset, num_bytes)) != num_bytes) {
+		LOG_INFO("READ OUT %d bytes", size);
+		throw InternalError("DiskManager::read_page Error: not equal with num bytes");
 	}
 }
 

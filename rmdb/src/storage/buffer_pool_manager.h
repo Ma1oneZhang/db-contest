@@ -9,6 +9,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #pragma once
+#include <atomic>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -22,6 +23,7 @@ See the Mulan PSL v2 for more details. */
 #include "replacer/lru_replacer.h"
 #include "replacer/replacer.h"
 #include <utils/ConcurrencyMap.h>
+#include <utils/log.h>
 
 class BufferPoolManager {
 private:
@@ -29,13 +31,14 @@ private:
 	Page *pages_;                                                     // buffer_pool中的Page对象数组，在构造空间中申请内存空间，在析构函数中释放，大小为BUFFER_POOL_SIZE
 	utils::ConcurrencyMap<PageId, frame_id_t, PageIdHash> page_table_;// 帧号和页面号的映射哈希表，用于根据页面的PageId定位该页面的帧编号
 	std::list<frame_id_t> free_list_;                                 // 空闲帧编号的链表
-	DiskManager *disk_manager_;
-	Replacer *replacer_;// buffer_pool的置换策略，当前赛题中为LRU置换策略
-	std::mutex latch_;  // 用于共享数据结构的并发控制
+	DiskManager *disk_manager_;                                       // diskManager
+	Replacer *replacer_;                                              // buffer_pool的置换策略，当前赛题中为LRU置换策略
+	std::mutex latch_;                                                // 用于共享数据结构的并发控制
+	std::vector<std::atomic<int>> pin_count_;                         // pin_count_ if count is zero, use replacer unpin function
 
 public:
 	BufferPoolManager(size_t pool_size, DiskManager *disk_manager)
-			: pool_size_(pool_size), disk_manager_(disk_manager) {
+			: pool_size_(pool_size), disk_manager_(disk_manager), pin_count_(pool_size) {
 		// 为buffer pool分配一块连续的内存空间
 		pages_ = new Page[pool_size_];
 		// 可以被Replacer改变
@@ -60,13 +63,13 @@ public:
 public:
 	Page *fetch_page(PageId page_id);
 
-	bool unpin_page(PageId page_id, bool is_dirty);
+	bool unpin_page(const PageId &page_id, bool is_dirty);
 
-	bool flush_page(PageId page_id);
+	bool flush_page(const PageId &page_id);
 
 	Page *new_page(PageId *page_id);
 
-	bool delete_page(PageId page_id);
+	bool delete_page(const PageId &page_id);
 
 	void flush_all_pages(int fd);
 

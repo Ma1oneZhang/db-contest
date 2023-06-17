@@ -35,6 +35,7 @@ See the Mulan PSL v2 for more details. */
 #include "replacer/lru_replacer.h"
 #include "storage/disk_manager.h"
 #include "gtest/gtest.h"
+#include <utils/log.h>
 
 const std::string TEST_DB_NAME = "BufferPoolManagerTest_db";// 以数据库名作为根目录
 const std::string TEST_FILE_NAME = "basic";                 // 测试文件的名字
@@ -280,7 +281,7 @@ public:
 };
 
 // NOLINTNEXTLINE
-TEST_F(BufferPoolManagerTest, DISABLED_SampleTest) {
+TEST_F(BufferPoolManagerTest, SampleTest) {
 	// create BufferPoolManager
 	const size_t buffer_pool_size = 10;
 	auto disk_manager = BufferPoolManagerTest::disk_manager_.get();
@@ -316,7 +317,6 @@ TEST_F(BufferPoolManagerTest, DISABLED_SampleTest) {
 	for (int i = 0; i < 4; ++i) {
 		EXPECT_NE(nullptr, bpm->new_page(&page_id_temp));
 	}
-
 	// Scenario: We should be able to fetch the data we wrote a while ago.
 	page0 = bpm->fetch_page(PageId{fd, 0});
 	EXPECT_EQ(0, strcmp(page0->get_data(), "Hello"));
@@ -378,7 +378,7 @@ public:
 	};
 };
 
-TEST_F(BufferPoolManagerConcurrencyTest, DISABLED_ConcurrencyTest) {
+TEST_F(BufferPoolManagerConcurrencyTest, ConcurrencyTest) {
 	const int num_threads = 5;
 	const int num_runs = 50;
 
@@ -460,7 +460,6 @@ TEST(StorageTest, SimpleTest) {
 
 		disk_manager->set_fd2pageno(fd, 0);// diskmanager在fd对应的文件中从0开始分配page_no
 	}
-
 	/** Test buffer_pool_manager*/
 	int num_pages = 0;
 	char init_buf[PAGE_SIZE];
@@ -468,7 +467,6 @@ TEST(StorageTest, SimpleTest) {
 		int fd = fh.first;
 		for (page_id_t i = 0; i < MAX_PAGES; i++) {
 			rand_buf(PAGE_SIZE, init_buf);// 将init_buf填充PAGE_SIZE个字节的随机数据
-
 			PageId tmp_page_id = {.fd = fd, .page_no = INVALID_PAGE_ID};
 			Page *page = buffer_pool_manager->new_page(&tmp_page_id);
 			int page_no = tmp_page_id.page_no;
@@ -477,12 +475,9 @@ TEST(StorageTest, SimpleTest) {
 
 			memcpy(page->get_data(), init_buf, PAGE_SIZE);
 			buffer_pool_manager->unpin_page(PageId{fd, page_no}, true);
-
 			char *mock_buf = mock_get_page(fd, page_no);// &mock[fd][page_no * PAGE_SIZE]
 			memcpy(mock_buf, init_buf, PAGE_SIZE);
-
 			num_pages++;
-
 			check_cache(fd, page_no);// 调用了fetch_page, unpin_page
 		}
 	}
@@ -500,7 +495,7 @@ TEST(StorageTest, SimpleTest) {
 		}
 	}
 	check_disk_all();
-
+	LOG_INFO("HERE")
 	for (int r = 0; r < 10000; r++) {
 		int fd = rand_fd();
 		int page_no = rand() % MAX_PAGES;
@@ -513,10 +508,8 @@ TEST(StorageTest, SimpleTest) {
 		rand_buf(PAGE_SIZE, init_buf);
 		memcpy(page->get_data(), init_buf, PAGE_SIZE);
 		memcpy(mock_buf, init_buf, PAGE_SIZE);
-
 		buffer_pool_manager->unpin_page(page->get_page_id(), true);
 		// BufferPool::mark_dirty(page);
-
 		// flush
 		if (rand() % 10 == 0) {
 			buffer_pool_manager->flush_page(page->get_page_id());
@@ -541,7 +534,7 @@ TEST(StorageTest, SimpleTest) {
 		check_cache(fd, page_no);
 	}
 	check_cache_all();
-
+	LOG_INFO("HERE")
 	for (auto &entry: fd2name) {
 		int fd = entry.first;
 		buffer_pool_manager->flush_all_pages(fd);
