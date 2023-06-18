@@ -61,7 +61,6 @@ void DiskManager::read_page(int fd, page_id_t page_no, char *offset, int num_byt
 	}
 	size_t size;
 	if ((size = read(fd, offset, num_bytes)) != num_bytes) {
-		LOG_INFO("READ OUT %d bytes", size);
 		throw InternalError("DiskManager::read_page Error: not equal with num bytes");
 	}
 }

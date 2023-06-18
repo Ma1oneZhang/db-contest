@@ -159,9 +159,8 @@ Page *BufferPoolManager::new_page(PageId *page_id) {
 				return nullptr;
 			}
 		} else {
-
-			frame = *free_list_.rbegin();
-			free_list_.pop_back();
+			frame = *free_list_.begin();
+			free_list_.pop_front();
 		}
 	}
 	*page_id = {page_id->fd, disk_manager_->allocate_page(page_id->fd)};

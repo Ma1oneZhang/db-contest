@@ -8,6 +8,7 @@ EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
+#include "common/config.h"
 #undef NDEBUG
 
 #define private public
@@ -89,7 +90,9 @@ void rand_buf(int size, char *buf) {
 	for (int i = 0; i < size; i++) {
 		int rand_ch = rand() & 0xff;
 		buf[i] = rand_ch;
+		buf[i] |= 1;
 	}
+	buf[size] = 0;
 }
 
 int rand_fd() {
@@ -232,6 +235,108 @@ TEST(LRUReplacerTest, SampleTest) {
 	EXPECT_EQ(4, value);
 }
 
+/**
+ * @brief 加大数据量，测试LRUReplacer的基本功能
+ * @note lab1 计分：5 points
+ */
+TEST(LRUReplacerTest, MixTest) {
+	int result;
+	int value_size = 10000;
+	auto lru_replacer = new LRUReplacer(value_size);
+	std::vector<int> value(value_size);
+	for (int i = 0; i < value_size; i++) {
+		value[i] = i;
+	}
+	auto rng = std::default_random_engine{};
+	std::shuffle(value.begin(), value.end(), rng);
+
+	for (int i = 0; i < value_size; i++) {
+		lru_replacer->unpin(value[i]);
+	}
+	EXPECT_EQ(value_size, lru_replacer->Size());
+
+	// Pin and unpin 777
+	lru_replacer->pin(777);
+	lru_replacer->unpin(777);
+	// Pin and unpin 0
+	EXPECT_EQ(1, lru_replacer->victim(&result));
+	EXPECT_EQ(value[0], result);
+	lru_replacer->unpin(value[0]);
+
+	for (int i = 0; i < value_size / 2; i++) {
+		if (value[i] != value[0] && value[i] != 777) {
+			lru_replacer->pin(value[i]);
+			lru_replacer->unpin(value[i]);
+		}
+	}
+
+	std::vector<int> lru_array;
+	for (int i = value_size / 2; i < value_size; ++i) {
+		if (value[i] != value[0] && value[i] != 777) {
+			lru_array.push_back(value[i]);
+		}
+	}
+	lru_array.push_back(777);
+	lru_array.push_back(value[0]);
+	for (int i = 0; i < value_size / 2; ++i) {
+		if (value[i] != value[0] && value[i] != 777) {
+			lru_array.push_back(value[i]);
+		}
+	}
+	EXPECT_EQ(value_size, lru_replacer->Size());
+
+	for (int e: lru_array) {
+		EXPECT_EQ(true, lru_replacer->victim(&result));
+		EXPECT_EQ(e, result);
+	}
+	EXPECT_EQ(value_size - lru_array.size(), lru_replacer->Size());
+
+	delete lru_replacer;
+}
+
+/**
+ * @brief 并发测试LRUReplacer
+ * @note lab1 计分：10 points
+ */
+TEST(LRUReplacerTest, ConcurrencyTest) {
+	const int num_threads = 5;
+	const int num_runs = 50;
+	for (int run = 0; run < num_runs; run++) {
+		int value_size = 1000;
+		std::shared_ptr<LRUReplacer> lru_replacer{new LRUReplacer(value_size)};
+		std::vector<std::thread> threads;
+		int result;
+		std::vector<int> value(value_size);
+		for (int i = 0; i < value_size; i++) {
+			value[i] = i;
+		}
+		auto rng = std::default_random_engine{};
+		std::shuffle(value.begin(), value.end(), rng);
+
+		for (int tid = 0; tid < num_threads; tid++) {
+			threads.push_back(std::thread([tid, &lru_replacer, &value]() {
+				int share = 1000 / 5;
+				for (int i = 0; i < share; i++) {
+					lru_replacer->unpin(value[tid * share + i]);
+				}
+			}));
+		}
+
+		for (int i = 0; i < num_threads; i++) {
+			threads[i].join();
+		}
+		std::vector<int> out_values;
+		for (int i = 0; i < value_size; i++) {
+			EXPECT_EQ(1, lru_replacer->victim(&result));
+			out_values.push_back(result);
+		}
+		std::sort(value.begin(), value.end());
+		std::sort(out_values.begin(), out_values.end());
+		EXPECT_EQ(value, out_values);
+		EXPECT_EQ(0, lru_replacer->victim(&result));
+	}
+}
+
 /** 注意：每个测试点只测试了单个文件！
  * 对于每个测试点，先创建和进入目录TEST_DB_NAME
  * 然后在此目录下创建和打开文件TEST_FILE_NAME，记录其文件描述符fd */
@@ -327,7 +432,6 @@ TEST_F(BufferPoolManagerTest, SampleTest) {
 
 	bpm->flush_all_pages(fd);
 }
-
 /** 注意：每个测试点只测试了单个文件！
  * 对于每个测试点，先创建和进入目录TEST_DB_NAME
  * 然后在此目录下创建和打开文件TEST_FILE_NAME_CCUR，记录其文件描述符fd */
@@ -554,9 +658,12 @@ TEST(StorageTest, SimpleTest) {
 		} catch (const FileNotFoundError &e) {
 		}
 	}
+	for (auto [fd, ptr]: mock) {
+		delete[] ptr;
+	}
 }
 
-TEST(RecordManagerTest, DISABLED_SimpleTest) {
+TEST(RecordManagerTest, SimpleTest) {
 	srand((unsigned) time(nullptr));
 
 	// 创建RmManager类的对象rm_manager
@@ -583,7 +690,6 @@ TEST(RecordManagerTest, DISABLED_SimpleTest) {
 		assert(file_handle->file_hdr_.record_size == record_size);
 		assert(file_handle->file_hdr_.first_free_page_no == RM_NO_PAGE);
 		assert(file_handle->file_hdr_.num_pages == 1);
-
 		int max_bytes = file_handle->file_hdr_.record_size * file_handle->file_hdr_.num_records_per_page +
 										file_handle->file_hdr_.bitmap_size + (int) sizeof(RmPageHdr);
 		assert(max_bytes <= PAGE_SIZE);
@@ -609,13 +715,17 @@ TEST(RecordManagerTest, DISABLED_SimpleTest) {
 		double insert_prob = 1. - mock.size() / 250.;
 		double dice = rand() * 1. / RAND_MAX;
 		if (mock.empty() || dice < insert_prob) {
+			LOG_INFO("UP")
 			rand_buf(file_handle->file_hdr_.record_size, write_buf);
+			assert(strlen(write_buf) == file_handle->file_hdr_.record_size);
 			Rid rid = file_handle->insert_record(write_buf, nullptr);
+			LOG_INFO("RID = %d, %d", rid.page_no, rid.slot_no)
 			mock[rid] = std::string((char *) write_buf, file_handle->file_hdr_.record_size);
 			add_cnt++;
 			//            std::cout << "insert " << rid << '\n'; // operator<<(cout,rid)
 		} else {
 			// update or erase random rid
+			LOG_INFO("DOWN")
 			int rid_idx = rand() % mock.size();
 			auto it = mock.begin();
 			for (int i = 0; i < rid_idx; i++) {
@@ -628,27 +738,27 @@ TEST(RecordManagerTest, DISABLED_SimpleTest) {
 				file_handle->update_record(rid, write_buf, nullptr);
 				mock[rid] = std::string((char *) write_buf, file_handle->file_hdr_.record_size);
 				upd_cnt++;
-				//                std::cout << "update " << rid << '\n';
+				// std::cout << "update " << rid << '\n';
 			} else {
 				// erase
 				file_handle->delete_record(rid, nullptr);
 				mock.erase(rid);
 				del_cnt++;
-				//                std::cout << "delete " << rid << '\n';
+				// std::cout << "delete " << rid << '\n';
 			}
 		}
 		// Randomly re-open file
-		if (round % 50 == 0) {
-			rm_manager->close_file(file_handle.get());
-			file_handle = rm_manager->open_file(filename);
-		}
+		// if (round % 50 == 0) {
+		rm_manager->close_file(file_handle.get());
+		file_handle = rm_manager->open_file(filename);
 		check_equal(file_handle.get(), mock);
+		// }
 	}
-	assert(mock.size() == add_cnt - del_cnt);
-	std::cout << "insert " << add_cnt << '\n'
-						<< "delete " << del_cnt << '\n'
-						<< "update " << upd_cnt << '\n';
+	// std::cout << "insert " << add_cnt << '\n'
+	// 					<< "delete " << del_cnt << '\n'
+	// 					<< "update " << upd_cnt << '\n';
 	// clean up
 	rm_manager->close_file(file_handle.get());
 	rm_manager->destroy_file(filename);
+	EXPECT_EQ(mock.size(), add_cnt - del_cnt);
 }
