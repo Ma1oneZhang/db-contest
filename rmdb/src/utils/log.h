@@ -21,7 +21,7 @@
 	{                                                                             \
 		char log_buf[1024];                                                         \
 		sprintf(log_buf, "WARNING [%s:%d]: " fmt "\n", __FILE__, __LINE__, ##args); \
-		fprintf(stderr, "%s", log_buf);                                             \
+		fprintf(stdout, "%s", log_buf);                                             \
 	}
 #else
 #define LOG_WARN(fmt, args...)
@@ -31,7 +31,7 @@
 	{                                                                          \
 		char log_buf[1024];                                                      \
 		sprintf(log_buf, "INFO [%s:%d]: " fmt "\n", __FILE__, __LINE__, ##args); \
-		fprintf(stderr, "%s", log_buf);                                          \
+		fprintf(stdout, "%s", log_buf);                                          \
 	}
 #else
 #define LOG_INFO(fmt, args...)

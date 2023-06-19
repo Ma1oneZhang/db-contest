@@ -30,7 +30,7 @@ bool LRUReplacer::victim(frame_id_t *frame_id) {
 	if (LRUlist_.size() == 0) {
 		return false;
 	} else {
-		*frame_id = *LRUlist_.rbegin();
+		*frame_id = LRUlist_.back();
 		LRUlist_.pop_back();
 		exist_[*frame_id] = false;
 		return true;
@@ -71,7 +71,8 @@ void LRUReplacer::unpin(frame_id_t frame_id) {
 			// LRUlist_.erase(frame);
 		}
 		// reinsert
-		LRU_it_[frame_id] = LRUlist_.insert(LRUlist_.begin(), frame_id);
+		LRUlist_.emplace_front(frame_id);
+		LRU_it_[frame_id] = LRUlist_.begin();
 		is_pined_[frame_id] = false;
 		exist_[frame_id] = true;
 	}

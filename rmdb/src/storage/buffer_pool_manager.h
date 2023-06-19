@@ -10,6 +10,7 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 #include <atomic>
+#include <cstddef>
 #include <fcntl.h>
 #include <unistd.h>
 
@@ -34,11 +35,10 @@ private:
 	DiskManager *disk_manager_;                                       // diskManager
 	Replacer *replacer_;                                              // buffer_pool的置换策略，当前赛题中为LRU置换策略
 	std::mutex latch_;                                                // 用于共享数据结构的并发控制
-	std::vector<int> pin_count_;                                      // pin_count_ if count is zero, use replacer unpin function
 
 public:
 	BufferPoolManager(size_t pool_size, DiskManager *disk_manager)
-			: pool_size_(pool_size), disk_manager_(disk_manager), pin_count_(pool_size) {
+			: pool_size_(pool_size), disk_manager_(disk_manager) {
 		// 为buffer pool分配一块连续的内存空间
 		pages_ = new Page[pool_size_];
 		// 可以被Replacer改变
@@ -72,14 +72,6 @@ public:
 	bool delete_page(const PageId &page_id);
 
 	void flush_all_pages(int fd);
-	/** for test **/
-	bool all_is_unpined() {
-		for (int i = 0; i < pool_size_; i++) {
-			if (pin_count_[i] != 0)
-				return false;
-		}
-		return true;
-	}
 
 private:
 	bool find_victim_page(frame_id_t *frame_id);
