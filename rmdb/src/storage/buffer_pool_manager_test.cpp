@@ -367,8 +367,8 @@ TEST_F(BufferPoolManagerTest, DISABLED_FetchTest) {
  * @note lab1 计分：15 points
  */
 TEST_F(BufferPoolManagerTest, ConcurrencyTest) {
-	const int num_threads = 5;
-	const int num_runs = 50;
+	const int num_threads = 500;
+	const int num_runs = 500;
 
 	const std::string filename = "concurrency_test";
 	const int buffer_pool_size = 50;
