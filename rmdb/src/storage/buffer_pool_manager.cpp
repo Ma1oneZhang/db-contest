@@ -10,6 +10,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "buffer_pool_manager.h"
 #include <mutex>
+#include <stdexcept>
 
 /**
  * @description: 从free_list或replacer中得到可淘汰帧页的 *frame_id
@@ -38,14 +39,16 @@ bool BufferPoolManager::find_victim_page(frame_id_t *frame_id) {
 void BufferPoolManager::update_page(Page *page, PageId new_page_id, frame_id_t new_frame_id) {
 	// 1 如果是脏页，写回磁盘，并且把dirty置为false
 	if (page->is_dirty()) {
+		page->mu.unlock();
+		// reset is_dirty to false
 		flush_page(page->get_page_id());
+		page->mu.lock();
 	}
 	// 2 更新page table
 	page_table_.Erase(page->get_page_id());
 	page_table_.Insert(new_page_id, new_frame_id);
-	page->set_page_id(new_page_id);
 	// 3 重置page的data，更新page id
-	page->reset_memory();
+	page->set_page_id(new_page_id);
 }
 
 /**
@@ -71,15 +74,20 @@ Page *BufferPoolManager::fetch_page(PageId page_id) {
 			}
 		}
 		{
-			// std::scoped_lock page_latch{pages_[frame].mu};
+			std::scoped_lock page_latch{pages_[frame].mu};
 			// 2.     若获得的可用frame存储的为dirty page，则须调用updata_page将page写回到磁盘
 			if (pages_[frame].is_dirty()) {
 				update_page(&pages_[frame], page_id, frame);
+			} else {
+				page_table_.Erase(pages_[frame].get_page_id());
+				page_table_.Insert(page_id, frame);
 			}
 			// 3.     调用disk_manager_的read_page读取目标页到frame
 			disk_manager_->read_page(page_id.fd, page_id.page_no, pages_[frame].get_data(), PAGE_SIZE);
+			pages_[frame].set_page_id(page_id);
 		}
 	}
+	std::scoped_lock page_latch{pages_[frame].mu};
 	pin_count_[frame]++;
 	return &pages_[frame];
 }
@@ -103,15 +111,23 @@ bool BufferPoolManager::unpin_page(const PageId &page_id, bool is_dirty) {
 	// 3 根据参数is_dirty，更改P的is_dirty_
 	frame_id_t frame{-1};
 	// 1.     从page_table_中搜寻目标页
-	if (!page_table_.Find(page_id, frame) || pin_count_[frame] == 0) {
+	if (!page_table_.Find(page_id, frame)) {
 		return false;
 	}
-	pin_count_[frame]--;
-	if (pin_count_[frame] == 0) {
-		replacer_->unpin(frame);
+	{
+		std::scoped_lock page_latch{pages_[frame].mu};
+		if (pin_count_[frame] == 0) {
+			return false;
+		}
 	}
-	std::scoped_lock page_latch{pages_[frame].mu};
-	pages_[frame].is_dirty_ |= is_dirty;
+	{
+		std::scoped_lock page_latch{pages_[frame].mu};
+		pages_[frame].is_dirty_ |= is_dirty;
+		pin_count_[frame]--;
+		if (pin_count_[frame] == 0) {
+			replacer_->unpin(frame);
+		}
+	}
 	return true;
 }
 
@@ -164,13 +180,21 @@ Page *BufferPoolManager::new_page(PageId *page_id) {
 		}
 	}
 	*page_id = {page_id->fd, disk_manager_->allocate_page(page_id->fd)};
-	flush_page(pages_[frame].get_page_id());
-	page_table_.Erase(pages_[frame].get_page_id());
+	PageId page_id_{};
+	bool is_page_dirty;
 	{
 		std::scoped_lock page_latch{pages_[frame].mu};
-		pages_[frame].set_page_id(*page_id);
+		page_id_ = pages_[frame].get_page_id();
+		is_page_dirty = pages_[frame].is_dirty();
 	}
-	pin_count_[frame]++;
+	if (is_page_dirty)
+		flush_page(page_id_);
+	{
+		std::scoped_lock page_latch{pages_[frame].mu};
+		page_table_.Erase(pages_[frame].get_page_id());
+		pages_[frame].set_page_id(*page_id);
+		pin_count_[frame]++;
+	}
 	page_table_.Insert(*page_id, frame);
 	return &pages_[frame];
 }
@@ -188,10 +212,13 @@ bool BufferPoolManager::delete_page(const PageId &page_id) {
 	if (!page_table_.Find(page_id, frame)) {
 		return true;
 	}
-	if (pin_count_[frame]) {
-		return false;
+	{
+		std::scoped_lock page_latch{pages_[frame].mu};
+		if (pin_count_[frame]) {
+			return false;
+		}
+		page_table_.Erase(pages_[frame].get_page_id());
 	}
-	page_table_.Erase(pages_[frame].get_page_id());
 	flush_page(page_id);
 	{
 		std::scoped_lock page_latch{pages_[frame].mu};
@@ -210,13 +237,13 @@ bool BufferPoolManager::delete_page(const PageId &page_id) {
  */
 void BufferPoolManager::flush_all_pages(int fd) {
 	for (size_t i = 0; i < pool_size_; i++) {
-		int pagefd = 0;
 		{
 			std::scoped_lock page_latch{pages_[i].mu};
-			pagefd = pages_[i].get_page_id().fd;
-		}
-		if (pagefd == fd) {
-			flush_page(pages_[i].get_page_id());
+			if (fd == pages_[i].get_page_id().fd) {
+				Page *page = &pages_[i];
+				disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+				page->is_dirty_ = false;
+			}
 		}
 	}
 }

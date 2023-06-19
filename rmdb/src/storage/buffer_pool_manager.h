@@ -34,7 +34,7 @@ private:
 	DiskManager *disk_manager_;                                       // diskManager
 	Replacer *replacer_;                                              // buffer_pool的置换策略，当前赛题中为LRU置换策略
 	std::mutex latch_;                                                // 用于共享数据结构的并发控制
-	std::vector<std::atomic<int>> pin_count_;                         // pin_count_ if count is zero, use replacer unpin function
+	std::vector<int> pin_count_;                                      // pin_count_ if count is zero, use replacer unpin function
 
 public:
 	BufferPoolManager(size_t pool_size, DiskManager *disk_manager)
@@ -72,6 +72,14 @@ public:
 	bool delete_page(const PageId &page_id);
 
 	void flush_all_pages(int fd);
+	/** for test **/
+	bool all_is_unpined() {
+		for (int i = 0; i < pool_size_; i++) {
+			if (pin_count_[i] != 0)
+				return false;
+		}
+		return true;
+	}
 
 private:
 	bool find_victim_page(frame_id_t *frame_id);

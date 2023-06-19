@@ -4,7 +4,7 @@
 
 // debug info warning error
 #ifndef INFO_LEVEL
-#define INFO_LEVEL 1
+#define INFO_LEVEL 4
 #endif
 #if INFO_LEVEL >= 1
 #define LOG_ERR(fmt, args...)                                                 \

@@ -11,6 +11,7 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <fcntl.h>
+#include <mutex>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -98,4 +99,5 @@ private:
 	int log_fd_ = -1;                           // WAL日志文件的文件句柄，默认为-1，代表未打开日志文件
 	std::atomic<page_id_t> fd2pageno_[MAX_FD]{};// 文件中已经分配的页面个数，初始值为0
 	std::vector<bool> openList_;
+	std::unordered_map<int, std::mutex> fd_latch_;
 };

@@ -47,23 +47,18 @@ void RmScan::next() {
 	}
 	for (int i = rid_.page_no; i <= file_handle_->file_hdr_.num_pages; i++) {
 		if (i == file_handle_->file_hdr_.num_pages) {
-			LOG_INFO("RETURN")
 			rid_ = {i, -1};
 			return;
 		}
 		auto page_handle = file_handle_->fetch_page_handle(i);
 		if (page_handle.page_hdr->num_records != 0) {
 			auto slot_no = Bitmap::next_bit(true, page_handle.bitmap, page_handle.file_hdr->num_records_per_page, new_page ? -1 : rid_.slot_no);
-			LOG_INFO("page_on = %d, num_records_per_page = %d", i, page_handle.file_hdr->num_records_per_page)
-			LOG_INFO("start index = %d", new_page ? -1 : rid_.slot_no)
-			LOG_INFO("find slot = %d", slot_no)
 			if (slot_no == page_handle.file_hdr->num_records_per_page) {
 				rid_.slot_no = -1;
 				continue;
 			}
 			rid_ = {i, slot_no};
 			file_handle_->buffer_pool_manager_->unpin_page(page_handle.page->get_page_id(), false);
-			LOG_INFO("GOT RID %d, %d", rid_.page_no, rid_.slot_no)
 			return;
 		}
 		file_handle_->buffer_pool_manager_->unpin_page(page_handle.page->get_page_id(), false);

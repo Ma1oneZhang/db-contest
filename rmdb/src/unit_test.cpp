@@ -88,9 +88,8 @@ void check_cache_all() {
 
 void rand_buf(int size, char *buf) {
 	for (int i = 0; i < size; i++) {
-		int rand_ch = rand() & 0xff;
-		buf[i] = rand_ch;
-		buf[i] |= 1;
+		buf[i] = rand() & 0xff;
+		// buf[i] |= 1;
 	}
 	buf[size] = 0;
 }
@@ -715,17 +714,13 @@ TEST(RecordManagerTest, SimpleTest) {
 		double insert_prob = 1. - mock.size() / 250.;
 		double dice = rand() * 1. / RAND_MAX;
 		if (mock.empty() || dice < insert_prob) {
-			LOG_INFO("UP")
 			rand_buf(file_handle->file_hdr_.record_size, write_buf);
-			assert(strlen(write_buf) == file_handle->file_hdr_.record_size);
 			Rid rid = file_handle->insert_record(write_buf, nullptr);
-			LOG_INFO("RID = %d, %d", rid.page_no, rid.slot_no)
 			mock[rid] = std::string((char *) write_buf, file_handle->file_hdr_.record_size);
 			add_cnt++;
-			//            std::cout << "insert " << rid << '\n'; // operator<<(cout,rid)
+			//            std::cout << "insert " << rid << '\n'; // operator<<(cout,drid)
 		} else {
 			// update or erase random rid
-			LOG_INFO("DOWN")
 			int rid_idx = rand() % mock.size();
 			auto it = mock.begin();
 			for (int i = 0; i < rid_idx; i++) {
@@ -748,16 +743,12 @@ TEST(RecordManagerTest, SimpleTest) {
 			}
 		}
 		// Randomly re-open file
-		// if (round % 50 == 0) {
-		rm_manager->close_file(file_handle.get());
-		file_handle = rm_manager->open_file(filename);
-		check_equal(file_handle.get(), mock);
-		// }
+		if (round % 50 == 0) {
+			rm_manager->close_file(file_handle.get());
+			file_handle = rm_manager->open_file(filename);
+		}
 	}
-	// std::cout << "insert " << add_cnt << '\n'
-	// 					<< "delete " << del_cnt << '\n'
-	// 					<< "update " << upd_cnt << '\n';
-	// clean up
+	check_equal(file_handle.get(), mock);
 	rm_manager->close_file(file_handle.get());
 	rm_manager->destroy_file(filename);
 	EXPECT_EQ(mock.size(), add_cnt - del_cnt);

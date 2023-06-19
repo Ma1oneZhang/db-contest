@@ -28,6 +28,7 @@
 #include <cassert>
 #include <cstring>
 #include <ctime>
+#include <stdexcept>
 #include <string>
 #include <thread>
 #include <unordered_map>
@@ -217,6 +218,7 @@ TEST_F(BufferPoolManagerTest, MultipleFilesTest) {
 
 	std::vector<std::string> filenames(MAX_FILES);// MAX_FILES=32
 	std::unordered_map<int, std::string> fd2name;
+	// Create file
 	for (size_t i = 0; i < filenames.size(); i++) {
 		auto &filename = filenames[i];
 		filename = "multiple_files_test_" + std::to_string(i);
@@ -255,6 +257,7 @@ TEST_F(BufferPoolManagerTest, MultipleFilesTest) {
 
 			bool unpin_flag = buffer_pool_manager->unpin_page(page->get_page_id(), true);// unpin the page
 			EXPECT_EQ(unpin_flag, true);
+			assert(buffer_pool_manager->all_is_unpined());
 		}
 	}
 
@@ -267,49 +270,58 @@ TEST_F(BufferPoolManagerTest, MultipleFilesTest) {
 			// check disk: disk data == mock data
 			disk_manager_->read_page(fd, page_no, buf, PAGE_SIZE);// read page from disk (disk -> buf)
 			char *mock_buf = &mock[fd][page_no * PAGE_SIZE];      // get mock address in (fd,page_no)
-			EXPECT_EQ(memcmp(buf, mock_buf, PAGE_SIZE), 0);
+			assert(memcmp(buf, mock_buf, PAGE_SIZE) == 0);
 			// check disk: disk data == page data
 			Page *page = buffer_pool_manager->fetch_page(PageId{fd, page_no});
-			EXPECT_EQ(memcmp(buf, page->get_data(), PAGE_SIZE), 0);
+			assert(!buffer_pool_manager->all_is_unpined());
+			assert(memcmp(buf, page->get_data(), PAGE_SIZE) == 0);
 			bool unpin_flag = buffer_pool_manager->unpin_page(page->get_page_id(), false);
-			EXPECT_EQ(unpin_flag, true);
+			assert(buffer_pool_manager->all_is_unpined());
+			assert(unpin_flag == true);
 		}
+		assert(buffer_pool_manager->all_is_unpined());
 	}
-
+	int cnt = 0;
 	for (int r = 0; r < 10000; r++) {
+		cnt++;
 		int fd = rand_fd(mock);
 		int page_no = rand() % MAX_PAGES;
 		// fetch page
 		Page *page = buffer_pool_manager->fetch_page(PageId{fd, page_no});
+		assert(page->get_page_id().fd == fd);
+		assert(page->get_page_id().page_no == page_no);
 		char *mock_buf = &mock[fd][page_no * PAGE_SIZE];
 		assert(memcmp(page->get_data(), mock_buf, PAGE_SIZE) == 0);
-		LOG_INFO("%d", r)
 		// modify
 		rand_buf(buf, PAGE_SIZE);
 		memcpy(page->get_data(), buf, PAGE_SIZE);
 		memcpy(mock_buf, buf, PAGE_SIZE);
-
+		EXPECT_EQ(memcmp(buf, mock_buf, PAGE_SIZE), 0);
 		// flush
-		if (rand() % 10 == 0) {
-			buffer_pool_manager->flush_page(page->get_page_id());
+		// if (rand() % 10 == 0)
+		{
+			char *mock_buf = &mock[fd][page_no * PAGE_SIZE];// get mock address in (fd,page_no)
+			assert(memcmp(page->get_data(), mock_buf, PAGE_SIZE) == 0);
+			assert(buffer_pool_manager->flush_page(page->get_page_id()));
+			assert(page->get_page_id().fd == fd);
+			assert(page->get_page_id().page_no == page_no);
 			// check disk: disk data == mock data
 			disk_manager_->read_page(fd, page_no, buf, PAGE_SIZE);// read page from disk (disk -> buf)
-			char *mock_buf = &mock[fd][page_no * PAGE_SIZE];      // get mock address in (fd,page_no)
-			EXPECT_EQ(memcmp(buf, mock_buf, PAGE_SIZE), 0);
+			assert(memcmp(buf, mock_buf, PAGE_SIZE) == 0);
 		}
 		// check cache: page data == mock data
-		EXPECT_EQ(memcmp(page->get_data(), mock_buf, PAGE_SIZE), 0);
+		assert(memcmp(page->get_data(), mock_buf, PAGE_SIZE) == 0);
 
 		bool unpin_flag = buffer_pool_manager->unpin_page(page->get_page_id(), true);// unpin the page
-		EXPECT_EQ(unpin_flag, true);
+		assert(unpin_flag == true);
 	}
 
 	// close and destroy files
 	for (auto &entry: fd2name) {
 		int fd = entry.first;
 		disk_manager_->close_file(fd);
-		// auto &filename = entry.second;
-		// disk_manager_->destroy_file(filename);
+		auto &filename = entry.second;
+		disk_manager_->destroy_file(filename);
 	}
 }
 
@@ -378,7 +390,17 @@ TEST_F(BufferPoolManagerTest, ConcurrencyTest) {
 			EXPECT_NE(nullptr, new_page);
 			EXPECT_EQ(true, bpm->unpin_page(tmp_page_id, true));
 		}
-
+		for (int j = 0; j < buffer_pool_size; j++) {
+			auto *page = bpm->fetch_page(page_ids[j]);
+			if (j % 2 == 0) {
+				assert(0 == std::strcmp(std::to_string(page_ids[j].page_no).c_str(), (page->get_data())));
+				EXPECT_EQ(true, bpm->unpin_page(page_ids[j], false));
+			} else {
+				assert(0 == std::strcmp((std::string("Hard") + std::to_string(page_ids[j].page_no)).c_str(),
+																(page->get_data())));
+				EXPECT_EQ(true, bpm->unpin_page(page_ids[j], false));
+			}
+		}
 		std::vector<std::thread> threads;
 		for (int tid = 0; tid < num_threads; tid++) {
 			threads.push_back(std::thread([&bpm, tid, page_ids, fd]() {
@@ -386,13 +408,12 @@ TEST_F(BufferPoolManagerTest, ConcurrencyTest) {
 				int j = (tid * 10);
 				while (j < buffer_pool_size) {
 					if (j != tid * 10) {
-						auto *page_local = bpm->fetch_page(temp_page_id);
+						Page *page_local = nullptr;
 						while (page_local == nullptr) {
 							page_local = bpm->fetch_page(temp_page_id);
 						}
 						EXPECT_NE(nullptr, page_local);
-						EXPECT_EQ(0,
-											std::strcmp(std::to_string(temp_page_id.page_no).c_str(), (page_local->get_data())));
+						EXPECT_EQ(0, std::strcmp(std::to_string(temp_page_id.page_no).c_str(), (page_local->get_data())));
 						EXPECT_EQ(true, bpm->unpin_page(temp_page_id, false));
 						// If the page is still in buffer pool then put it in free list,
 						// else also we are happy
@@ -405,7 +426,7 @@ TEST_F(BufferPoolManagerTest, ConcurrencyTest) {
 					}
 					EXPECT_NE(nullptr, page);
 					if (j % 2 == 0) {
-						EXPECT_EQ(0, std::strcmp(std::to_string(page_ids[j].page_no).c_str(), (page->get_data())));
+						assert(0 == std::strcmp(std::to_string(page_ids[j].page_no).c_str(), (page->get_data())));
 						EXPECT_EQ(true, bpm->unpin_page(page_ids[j], false));
 					} else {
 						EXPECT_EQ(0, std::strcmp((std::string("Hard") + std::to_string(page_ids[j].page_no)).c_str(),

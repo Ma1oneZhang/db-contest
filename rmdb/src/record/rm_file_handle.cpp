@@ -42,11 +42,9 @@ Rid RmFileHandle::insert_record(char *buf, Context *context) {
 	if (file_hdr_.first_free_page_no == -1) {
 		page_handle = create_new_page_handle();
 	} else {
-		LOG_INFO("HERE the free_page is %d", file_hdr_.first_free_page_no)
 		page_handle = fetch_page_handle(file_hdr_.first_free_page_no);
 	}
 	auto free = Bitmap::next_bit(false, page_handle.bitmap, page_handle.file_hdr->num_records_per_page, -1);
-	LOG_INFO("free = %d", free)
 	auto rid = Rid{file_hdr_.first_free_page_no, free};
 	Bitmap::set(page_handle.bitmap, free);
 	update_record(rid, buf, context);
