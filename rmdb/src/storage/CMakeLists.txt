@@ -5,3 +5,6 @@ set(SOURCES
         ../replacer/lru_replacer.cpp 
 )
 add_library(storage STATIC ${SOURCES})
+
+add_executable(storage_test buffer_pool_manager_test.cpp)
+target_link_libraries(storage_test storage gtest_main)

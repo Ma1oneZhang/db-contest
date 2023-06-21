@@ -2,3 +2,7 @@ cmake-build-debug
 build
 deps/googletest
 .idea
+../.cache
+.cache
+./deps/googletest
+compile_commands.json

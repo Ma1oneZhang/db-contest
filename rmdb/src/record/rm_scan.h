@@ -10,19 +10,21 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include "record/rm_file_handle.h"
 #include "rm_defs.h"
 
 class RmFileHandle;
 
 class RmScan : public RecScan {
-    const RmFileHandle *file_handle_;
-    Rid rid_;
+	const RmFileHandle *file_handle_;
+	Rid rid_;
+
 public:
-    RmScan(const RmFileHandle *file_handle);
+	RmScan(const RmFileHandle *file_handle);
 
-    void next() override;
+	void next() override;
 
-    bool is_end() const override;
+	bool is_end() const override;
 
-    Rid rid() const override;
+	Rid rid() const override;
 };
