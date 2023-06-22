@@ -104,7 +104,7 @@ public:
  * @note 生成测试文件simple_test
  * @note lab1 计分：5 points
  */
-TEST_F(BufferPoolManagerTest, DISABLED_SimpleTest) {
+TEST_F(BufferPoolManagerTest, SimpleTest) {
 	const std::string filename = "simple_test";
 
 	// create BufferPoolManager
@@ -162,7 +162,7 @@ TEST_F(BufferPoolManagerTest, DISABLED_SimpleTest) {
  * @brief 在SimpleTest的基础上加大数据量（单文件），生成测试文件large_scale_test
  * @note lab1 计分：10 points
  */
-TEST_F(BufferPoolManagerTest, DISABLED_LargeScaleTest) {
+TEST_F(BufferPoolManagerTest, LargeScaleTest) {
 	const int scale = 10000;
 	const std::string filename = "large_scale_test";
 	// create BufferPoolManager
@@ -208,7 +208,7 @@ TEST_F(BufferPoolManagerTest, DISABLED_LargeScaleTest) {
  * @note 生成若干测试文件multiple_files_test_*
  * @note lab1 计分：10 points
  */
-TEST_F(BufferPoolManagerTest, DISABLED_MultipleFilesTest) {
+TEST_F(BufferPoolManagerTest, MultipleFilesTest) {
 	const size_t buffer_size = MAX_FILES * MAX_PAGES / 2;
 	auto buffer_pool_manager = std::make_unique<BufferPoolManager>(buffer_size, disk_manager_.get());
 
@@ -323,7 +323,7 @@ TEST_F(BufferPoolManagerTest, DISABLED_MultipleFilesTest) {
 		delete[] ptr;
 	}
 }
-TEST_F(BufferPoolManagerTest, DISABLED_FetchTest) {
+TEST_F(BufferPoolManagerTest, FetchTest) {
 	const int num_runs = 50;
 
 	const std::string filename = "fetch_test";
@@ -367,11 +367,11 @@ TEST_F(BufferPoolManagerTest, DISABLED_FetchTest) {
  * @note lab1 计分：15 points
  */
 TEST_F(BufferPoolManagerTest, ConcurrencyTest) {
-	const int num_threads = 500;
-	const int num_runs = 500;
+	const int num_threads = 5000;
+	const int num_runs = 50;
 
 	const std::string filename = "concurrency_test";
-	const int buffer_pool_size = 50;
+	const int buffer_pool_size = 1000;
 
 	// get disk manager
 	auto disk_manager = BufferPoolManagerTest::disk_manager_.get();
