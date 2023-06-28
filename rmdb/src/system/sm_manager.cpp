@@ -92,6 +92,10 @@ void SmManager::open_db(const std::string &db_name) {
 	}
 	std::ifstream disk_meta_file(DB_META_NAME);
 	disk_meta_file >> db_;
+	for (auto &table_meta: db_.tabs_) {
+		auto &table_name = table_meta.first;
+		fhs_[table_name] = rm_manager_->open_file(table_name);
+	}
 }
 
 /**
