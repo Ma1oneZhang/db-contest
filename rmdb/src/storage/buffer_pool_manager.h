@@ -72,7 +72,6 @@ public:
 	bool delete_page(const PageId &page_id);
 
 	void flush_all_pages(int fd);
-	void flush_all_pages();
 
 private:
 	bool find_victim_page(frame_id_t *frame_id);

@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include "index/ix.h"
 #include "record/rm.h"
 #include "record_printer.h"
+#include "system/sm_meta.h"
 
 /**
  * @description: 判断是否为一个文件夹
@@ -94,7 +95,19 @@ void SmManager::open_db(const std::string &db_name) {
 	disk_meta_file >> db_;
 	for (auto &table_meta: db_.tabs_) {
 		auto &table_name = table_meta.first;
+		auto &tab = table_meta.second;
 		fhs_[table_name] = rm_manager_->open_file(table_name);
+		std::vector<ColMeta> indexes;
+		for (size_t i = 0; i < tab.cols.size(); i++) {
+			if (tab.cols[i].index) {
+				indexes.emplace_back(tab.cols[i]);
+			}
+		}
+		if (indexes.size()) {
+			ihs_[table_name] = ix_manager_->open_index(table_name, indexes);
+		} else {
+			ihs_[table_name] = nullptr;
+		}
 	}
 }
 
@@ -112,7 +125,16 @@ void SmManager::flush_meta() {
  */
 void SmManager::close_db() {
 	flush_meta();
-	buffer_pool_manager_->flush_all_pages();
+	for (auto &[name, handle]: fhs_) {
+		rm_manager_->close_file(handle.get());
+	}
+	fhs_.clear();
+	for (auto &[name, handle]: ihs_) {
+		ix_manager_->close_index(handle.get());
+	}
+	ihs_.clear();
+	db_.name_.clear();
+	db_.tabs_.clear();
 }
 
 /**
@@ -202,8 +224,10 @@ void SmManager::drop_table(const std::string &tab_name, Context *context) {
 	if (!db_.is_table(tab_name)) {
 		throw TableNotFoundError(tab_name);
 	}
-	db_.tabs_.erase(tab_name);
+	rm_manager_->close_file(fhs_[tab_name].get());
 	rm_manager_->destroy_file(tab_name);
+	fhs_.erase(tab_name);
+	db_.tabs_.erase(tab_name);
 	flush_meta();
 }
 
