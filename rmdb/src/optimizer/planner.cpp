@@ -357,7 +357,6 @@ std::shared_ptr<Plan> Planner::do_planner(std::shared_ptr<Query> query, Context 
 																						std::vector<Value>(), query->conds,
 																						query->set_clauses);
 	} else if (auto x = std::dynamic_pointer_cast<ast::SelectStmt>(query->parse)) {
-		LOG_INFO("HERE")
 		std::shared_ptr<plannerInfo> root = std::make_shared<plannerInfo>(x);
 		// 生成select语句的查询执行计划
 		std::shared_ptr<Plan> projection = generate_select_plan(std::move(query), context);

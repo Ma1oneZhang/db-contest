@@ -37,7 +37,6 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 		if (query->cols.empty()) {
 			// select all columns
 			// select * statment
-			LOG_INFO("HERE")
 			for (auto &col: all_cols) {
 				TabCol sel_col = {.tab_name = col.tab_name, .col_name = col.name};
 				query->cols.push_back(sel_col);
@@ -104,17 +103,17 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 		check_clause(query->tables, query->conds);
 	} else if (auto x = std::dynamic_pointer_cast<ast::DeleteStmt>(parse)) {
 		//处理where条件
-		LOG_INFO("HERE")
+
 		get_clause(x->conds, query->conds);
 		check_clause({x->tab_name}, query->conds);
 	} else if (auto x = std::dynamic_pointer_cast<ast::InsertStmt>(parse)) {
 		// 处理insert 的values值
-		LOG_INFO("HERE")
+
 		for (auto &sv_val: x->vals) {
 			query->values.push_back(convert_sv_value(sv_val));
 		}
 	} else {
-		LOG_INFO("HERE")
+
 		// do nothing
 	}
 	query->parse = std::move(parse);

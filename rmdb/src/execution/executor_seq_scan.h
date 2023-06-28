@@ -49,19 +49,16 @@ public:
 	}
 	// Init
 	void beginTuple() override {
-		LOG_INFO()
 		scan_ = std::make_unique<RmScan>(fh_);
 		rid_ = scan_->rid();
 	}
 	// iterate
 	void nextTuple() override {
-		LOG_INFO()
 		scan_->next();
 		rid_ = scan_->rid();
 	}
 
 	std::unique_ptr<RmRecord> Next() override {
-		LOG_INFO("HERE")
 		return fh_->get_record(rid_, nullptr);
 	}
 
