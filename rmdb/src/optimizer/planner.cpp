@@ -20,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include "execution/executor_seq_scan.h"
 #include "execution/executor_update.h"
 #include "index/ix.h"
+#include "optimizer/plan.h"
 #include "record_printer.h"
 
 // 目前的索引匹配规则为：完全匹配索引字段，且全部为单点查询，不会自动调整where条件的顺序
@@ -282,7 +283,6 @@ std::shared_ptr<Plan> Planner::generate_select_plan(std::shared_ptr<Query> query
 	auto sel_cols = query->cols;
 	std::shared_ptr<Plan> plannerRoot = physical_optimization(query, context);
 	plannerRoot = std::make_shared<ProjectionPlan>(T_Projection, std::move(plannerRoot), std::move(sel_cols));
-
 	return plannerRoot;
 }
 

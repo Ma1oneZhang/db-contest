@@ -88,14 +88,15 @@ void SmManager::drop_db(const std::string &db_name) {
  * @param {string&} db_name 数据库名称，与文件夹同名
  */
 void SmManager::open_db(const std::string &db_name) {
+	if (!is_dir(db_name)) {
+		throw DatabaseNotFoundError(db_name);
+	}
 	if (chdir(db_name.c_str()) < 0) {// 进入名为db_name的目录
 		throw UnixError();
 	}
 	std::ifstream disk_meta_file(DB_META_NAME);
 	disk_meta_file >> db_;
-	for (auto &table_meta: db_.tabs_) {
-		auto &table_name = table_meta.first;
-		auto &tab = table_meta.second;
+	for (auto &[table_name, tab]: db_.tabs_) {
 		fhs_[table_name] = rm_manager_->open_file(table_name);
 		std::vector<ColMeta> indexes;
 		for (size_t i = 0; i < tab.cols.size(); i++) {
@@ -135,6 +136,10 @@ void SmManager::close_db() {
 	ihs_.clear();
 	db_.name_.clear();
 	db_.tabs_.clear();
+	// 回到根目录
+	if (chdir("..") < 0) {
+		throw UnixError();
+	}
 }
 
 /**
@@ -195,7 +200,12 @@ void SmManager::create_table(const std::string &tab_name, const std::vector<ColD
 	int curr_offset = 0;
 	TabMeta tab;
 	tab.name = tab_name;
+	std::unordered_set<std::string> exist;
 	for (auto &col_def: col_defs) {
+		if (exist.count(col_def.name)) {
+			throw AmbiguousColumnError(col_def.name);
+		}
+		exist.insert(col_def.name);
 		ColMeta col = {.tab_name = tab_name,
 									 .name = col_def.name,
 									 .type = col_def.type,

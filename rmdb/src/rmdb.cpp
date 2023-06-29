@@ -130,7 +130,7 @@ void *client_handler(void *sock_fd) {
 					// 优化器
 					std::shared_ptr<Plan> plan = optimizer->plan_query(query, context);
 					// portal
-					std::shared_ptr<PortalStmt> portalStmt = portal->start(plan, context);
+					std::shared_ptr<PortalStmt> portalStmt = portal->start(plan, contextinse);
 					portal->run(portalStmt, ql_manager.get(), &txn_id, context);
 					portal->drop();
 				}

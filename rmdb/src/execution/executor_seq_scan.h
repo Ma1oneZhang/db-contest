@@ -47,6 +47,9 @@ public:
 
 		fed_conds_ = conds_;
 	}
+	const std::vector<ColMeta> &cols() override {
+		return cols_;
+	}
 	// Init
 	void beginTuple() override {
 		scan_ = std::make_unique<RmScan>(fh_);
