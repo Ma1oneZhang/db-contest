@@ -9,12 +9,14 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include <atomic>
+#include <cstring>
 #include <memory>
 #include <netinet/in.h>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <setjmp.h>
 #include <signal.h>
+#include <string_view>
 #include <unistd.h>
 
 #include "analyze/analyze.h"
@@ -130,7 +132,7 @@ void *client_handler(void *sock_fd) {
 					// 优化器
 					std::shared_ptr<Plan> plan = optimizer->plan_query(query, context);
 					// portal
-					std::shared_ptr<PortalStmt> portalStmt = portal->start(plan, contextinse);
+					std::shared_ptr<PortalStmt> portalStmt = portal->start(plan, context);
 					portal->run(portalStmt, ql_manager.get(), &txn_id, context);
 					portal->drop();
 				}
@@ -167,6 +169,14 @@ void *client_handler(void *sock_fd) {
 				}
 			}
 		} else {
+			// send client parse error
+			std::string_view parse_error = "SQL_parse error recheck the sql";
+			memcpy(data_send, parse_error.data(), parse_error.size());
+			data_send[parse_error.size()] = '\n';
+			data_send[parse_error.size() + 1] = '\0';
+			offset = parse_error.size() + 1;
+
+			// write illuage sql to output file
 			std::fstream outfile;
 			outfile.open("output.txt", std::ios::out | std::ios::app);
 			outfile << "failure\n";
@@ -186,7 +196,8 @@ void *client_handler(void *sock_fd) {
 		// 	txn_manager->commit(context->txn_, context->log_mgr_);
 		// }
 	}
-
+	buffer_pool_manager->flush_all_pages();
+	sm_manager->flush_meta();
 	// Clear
 	std::cout << "Terminating current client_connection..." << std::endl;
 	close(fd);         // close a file descriptor.

@@ -61,6 +61,10 @@ public:
 		rid_ = scan_->rid();
 	}
 
+	bool is_end() const override {
+		return scan_->is_end();
+	}
+
 	std::unique_ptr<RmRecord> Next() override {
 		return fh_->get_record(rid_, nullptr);
 	}

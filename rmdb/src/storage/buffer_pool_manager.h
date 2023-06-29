@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 #include <atomic>
 #include <cstddef>
 #include <fcntl.h>
+#include <mutex>
 #include <unistd.h>
 
 #include <cassert>
@@ -72,6 +73,17 @@ public:
 	bool delete_page(const PageId &page_id);
 
 	void flush_all_pages(int fd);
+
+	void flush_all_pages() {
+		std::scoped_lock latch{latch_};
+		for (size_t i = 0; i < pool_size_; i++) {
+			Page *page = &pages_[i];	
+			if (page->get_page_id().page_no != INVALID_PAGE_ID) {
+				disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+				page->is_dirty_ = false;
+			}
+		}
+	}
 
 private:
 	bool find_victim_page(frame_id_t *frame_id);
