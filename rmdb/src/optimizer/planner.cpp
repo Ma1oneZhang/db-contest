@@ -11,6 +11,7 @@ See the Mulan PSL v2 for more details. */
 #include "planner.h"
 
 #include <memory>
+#include <utility>
 
 #include "execution/executor_delete.h"
 #include "execution/executor_index_scan.h"
@@ -43,9 +44,6 @@ bool Planner::get_index_cols(std::string tab_name, std::vector<Condition> curr_c
  * @return std::vector<Condition>
  */
 std::vector<Condition> pop_conds(std::vector<Condition> &conds, std::string tab_names) {
-	// auto has_tab = [&](const std::string &tab_name) {
-	//     return std::find(tab_names.begin(), tab_names.end(), tab_name) != tab_names.end();
-	// };
 	std::vector<Condition> solved_conds;
 	auto it = conds.begin();
 	while (it != conds.end()) {

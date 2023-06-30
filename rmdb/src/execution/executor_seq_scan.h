@@ -10,14 +10,19 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 
+#include "common/common.h"
+#include "defs.h"
 #include "execution_defs.h"
 #include "execution_manager.h"
 #include "executor_abstract.h"
 #include "index/ix.h"
+#include "index/ix_index_handle.h"
 #include "record/rm_defs.h"
 #include "record/rm_scan.h"
 #include "system/sm.h"
 #include <memory>
+#include <type_traits>
+#include <unordered_map>
 
 class SeqScanExecutor : public AbstractExecutor {
 private:
@@ -27,11 +32,83 @@ private:
 	std::vector<ColMeta> cols_;       // scan后生成的记录的字段
 	size_t len_;                      // scan后生成的每条记录的长度
 	std::vector<Condition> fed_conds_;// 同conds_，两个字段相同
-
+	std::unordered_map<CompOp, CompOp> swapOp = {
+		{OP_GE, OP_LE},
+		{OP_LE, OP_GE},
+		{OP_EQ, OP_EQ},
+		{OP_NE, OP_NE},
+		{OP_GT, OP_LT},
+		{OP_LT, OP_GT}};
 	Rid rid_;
 	std::unique_ptr<RecScan> scan_;// table_iterator
 
 	SmManager *sm_manager_;
+
+	bool checkCondition(const std::unique_ptr<RmRecord> &rec) {
+		bool res = false;
+		for (auto &cond: conds_) {
+			auto col = get_col(cols_, cond.lhs_col);
+			auto lhs = rec->data + col->offset;
+			char *rhs;
+			ColType rhs_type;
+			if (cond.is_rhs_val) {
+				rhs_type = cond.rhs_val.type;
+				rhs = cond.rhs_val.raw->data;
+			} else {
+				auto rhs_col = get_col(cols_, cond.rhs_col);
+				rhs_type = rhs_col->type;
+				rhs = rec->data + rhs_col->offset;
+			}
+			int cmp;
+			if (rhs_type == TYPE_FLOAT) {
+				if (col->type == TYPE_INT) {
+					cmp = ix_compare((int *) lhs, (double *) rhs, rhs_type, col->len);
+				} else if (col->type == TYPE_FLOAT) {
+					cmp = ix_compare((double *) lhs, (double *) rhs, rhs_type, col->len);
+				}
+			} else if (rhs_type == TYPE_INT) {
+				if (col->type == TYPE_INT) {
+					cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
+				} else if (col->type == TYPE_FLOAT) {
+					LOG_INFO("%.5f", *(double *) lhs);
+					cmp = ix_compare((double *) lhs, (int *) rhs, rhs_type, col->len);
+				}
+			} else {
+				assert(col->type == col->type);
+				// force it to compare by bytes
+				cmp = ix_compare(lhs, rhs, TYPE_STRING, col->len);
+			}
+			switch (cond.op) {
+				case OP_EQ:
+					if (cmp != 0)
+						return false;
+					break;
+				case OP_NE:
+					if (cmp == 0)
+						return false;
+					break;
+				case OP_GE:
+					if (cmp < 0)
+						return false;
+					break;
+				case OP_LE:
+					if (cmp > 0)
+						return false;
+					break;
+				case OP_GT:
+					if (cmp <= 0)
+						return false;
+					break;
+				case OP_LT:
+					if (cmp > 0)
+						return false;
+					break;
+				default:
+					assert(false);
+			}
+		}
+		return true;
+	}
 
 public:
 	SeqScanExecutor(SmManager *sm_manager, std::string tab_name, std::vector<Condition> conds, Context *context) {
@@ -44,7 +121,12 @@ public:
 		len_ = cols_.back().offset + cols_.back().len;
 
 		context_ = context;
-
+		for (auto &cond: conds) {
+			if (tab_name_ != cond.lhs_col.tab_name) {
+				std::swap(cond.lhs_col, cond.rhs_col);
+				cond.op = swapOp[cond.op];
+			}
+		}
 		fed_conds_ = conds_;
 	}
 	const std::vector<ColMeta> &cols() override {
@@ -54,11 +136,23 @@ public:
 	void beginTuple() override {
 		scan_ = std::make_unique<RmScan>(fh_);
 		rid_ = scan_->rid();
+		if (!checkCondition(fh_->get_record(rid_, nullptr))) {
+			for (scan_->next(); !scan_->is_end(); scan_->next()) {
+				rid_ = scan_->rid();
+				if (checkCondition(fh_->get_record(rid_, nullptr))) {
+					break;
+				}
+			}
+		}
 	}
 	// iterate
 	void nextTuple() override {
-		scan_->next();
-		rid_ = scan_->rid();
+		for (scan_->next(); !scan_->is_end(); scan_->next()) {
+			rid_ = scan_->rid();
+			if (checkCondition(fh_->get_record(rid_, nullptr))) {
+				break;
+			}
+		}
 	}
 
 	bool is_end() const override {

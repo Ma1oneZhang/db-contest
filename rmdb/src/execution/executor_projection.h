@@ -66,7 +66,7 @@ public:
 		for (size_t i = 0; i < project_cols.size(); i++) {
 			auto prev_idx = sel_idxs_[i];
 			auto &prev_col = prev_cols[prev_idx];
-			auto &proj_col = project_cols[prev_idx];
+			auto &proj_col = project_cols[i];
 			memcpy(project_rec->data + proj_col.offset, prev_rec->data + prev_col.offset, prev_col.len);
 		}
 		return project_rec;

@@ -9,6 +9,10 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include "analyze.h"
+#include "defs.h"
+#include "errors.h"
+#include "utils/log.h"
+#include <unordered_map>
 /**
  * @description: 分析器，进行语义分析和查询重写，需要检查不符合语义规定的部分
  * @param {shared_ptr<ast::TreeNode>} parse parser生成的结果集
@@ -44,6 +48,18 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 			// infer table name from column name
 			for (auto &sel_col: query->cols) {
 				sel_col = check_column(all_cols, sel_col);// 列元数据校验
+			}
+		}
+		std::unordered_map<std::string, std::vector<std::string>> cnt;
+		for (auto i: all_cols) {
+			cnt[i.name].push_back(i.tab_name);
+		}
+		for (auto i: x->conds) {
+			if (i->lhs->tab_name.empty() && !i->lhs->col_name.empty()) {
+				if (cnt[i->lhs->col_name].size() == 2) {
+					throw AmbiguousColumnError(i->lhs->col_name);
+				}
+				// 		i->lhs->tab_name = cnt[i->lhs->col_name].front();
 			}
 		}
 		//处理where条件
@@ -172,6 +188,7 @@ void Analyze::get_clause(const std::vector<std::shared_ptr<ast::BinaryExpr>> &sv
 		}
 		conds.push_back(cond);
 	}
+	LOG_INFO()
 }
 
 void Analyze::check_clause(const std::vector<std::string> &tab_names, std::vector<Condition> &conds) {
@@ -190,7 +207,13 @@ void Analyze::check_clause(const std::vector<std::string> &tab_names, std::vecto
 		ColType lhs_type = lhs_col->type;
 		ColType rhs_type;
 		if (cond.is_rhs_val) {
-			cond.rhs_val.init_raw(lhs_col->len);
+			if (cond.rhs_val.type == TYPE_FLOAT) {
+				cond.rhs_val.init_raw(sizeof(double));
+			} else if (cond.rhs_val.type == TYPE_INT) {
+				cond.rhs_val.init_raw(sizeof(int));
+			} else if (cond.rhs_val.type == TYPE_STRING) {
+				cond.rhs_val.init_raw(lhs_col->len);
+			}
 			rhs_type = cond.rhs_val.type;
 		} else {
 			TabMeta &rhs_tab = sm_manager_->db_.get_table(cond.rhs_col.tab_name);
@@ -199,7 +222,7 @@ void Analyze::check_clause(const std::vector<std::string> &tab_names, std::vecto
 		}
 		if (lhs_type == TYPE_FLOAT || lhs_type == TYPE_INT) {
 			if (rhs_type == TYPE_FLOAT || rhs_type == TYPE_INT) {
-				return;
+				continue;
 			}
 		}
 		if (lhs_type != rhs_type) {

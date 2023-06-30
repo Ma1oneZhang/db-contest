@@ -37,7 +37,6 @@ struct RmPageHdr {
 /* 表中的记录 */
 struct RmRecord {
 	char *data;// 记录的数据
-	char *origin_data;
 	int size;               // 记录的大小
 	bool allocated_ = false;// 是否已经为数据分配空间
 

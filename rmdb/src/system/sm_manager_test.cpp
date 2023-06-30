@@ -45,7 +45,7 @@ TEST(SystemManagerTest, SimpleTest) {
 	// Open database
 	sm_manager->open_db(db);
 	std::vector<ColDef> col_defs = {{.name = "a", .type = TYPE_INT, .len = 4},
-																	{.name = "b", .type = TYPE_FLOAT, .len = 4},
+																	{.name = "b", .type = TYPE_FLOAT, .len = 8},
 																	{.name = "c", .type = TYPE_STRING, .len = 256}};
 	// Create table 1
 	sm_manager->create_table(tab1, col_defs, context);
