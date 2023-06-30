@@ -68,7 +68,7 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 	} else if (auto x = std::dynamic_pointer_cast<ast::UpdateStmt>(parse)) {
 		/** TODO: */
 		// 处理表名
-		query->tables.emplace_back(std::move(x->tab_name));
+		query->tables.emplace_back(x->tab_name);
 		/* 检查表是否存在 */
 		for (auto &table: query->tables) {
 			if (!sm_manager_->db_.is_table(table)) {
@@ -83,12 +83,14 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 			if (auto x = std::dynamic_pointer_cast<ast::IntLit>(clause->val)) {
 				Value val;
 				val.type = TYPE_INT;
-				val.raw = std::make_shared<RmRecord>(sizeof(ast::IntLit), (char *) (x.get()));
+				val.set_int(x->val);
+				val.raw = std::make_shared<RmRecord>(sizeof(int), (char *) (&x->val));
 				query->set_clauses.push_back({tab_col, val});
 			} else if (auto x = std::dynamic_pointer_cast<ast::FloatLit>(clause->val)) {
 				Value val;
 				val.type = TYPE_FLOAT;
-				val.raw = std::make_shared<RmRecord>(sizeof(ast::FloatLit), (char *) (x.get()));
+				val.set_float(x->val);
+				val.raw = std::make_shared<RmRecord>(sizeof(double), (char *) (&x->val));
 				query->set_clauses.push_back({tab_col, val});
 			} else if (auto x = std::dynamic_pointer_cast<ast::StringLit>(clause->val)) {
 				Value val;
@@ -188,7 +190,6 @@ void Analyze::get_clause(const std::vector<std::shared_ptr<ast::BinaryExpr>> &sv
 		}
 		conds.push_back(cond);
 	}
-	LOG_INFO()
 }
 
 void Analyze::check_clause(const std::vector<std::string> &tab_names, std::vector<Condition> &conds) {

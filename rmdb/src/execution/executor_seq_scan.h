@@ -45,7 +45,6 @@ private:
 	SmManager *sm_manager_;
 
 	bool checkCondition(const std::unique_ptr<RmRecord> &rec) {
-		bool res = false;
 		for (auto &cond: conds_) {
 			auto col = get_col(cols_, cond.lhs_col);
 			auto lhs = rec->data + col->offset;
@@ -70,7 +69,6 @@ private:
 				if (col->type == TYPE_INT) {
 					cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
 				} else if (col->type == TYPE_FLOAT) {
-					LOG_INFO("%.5f", *(double *) lhs);
 					cmp = ix_compare((double *) lhs, (int *) rhs, rhs_type, col->len);
 				}
 			} else {

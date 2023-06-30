@@ -98,8 +98,8 @@ void SmManager::open_db(const std::string &db_name) {
 	std::ifstream disk_meta_file(DB_META_NAME);
 	disk_meta_file >> db_;
 	// take open the data_file
-	for (auto &[table_name, tab_meta]: db_.tabs_) {
-		fhs_[table_name] = rm_manager_->open_file(table_name);
+	for (auto &[_, tab_meta]: db_.tabs_) {
+		fhs_[tab_meta.name] = rm_manager_->open_file(tab_meta.name);
 		std::vector<ColMeta> indexes;
 		for (size_t i = 0; i < tab_meta.cols.size(); i++) {
 			if (tab_meta.cols[i].index) {
@@ -107,9 +107,9 @@ void SmManager::open_db(const std::string &db_name) {
 			}
 		}
 		if (indexes.size()) {
-			ihs_[table_name] = ix_manager_->open_index(table_name, indexes);
+			ihs_[tab_meta.name] = ix_manager_->open_index(tab_meta.name, indexes);
 		} else {
-			ihs_[table_name] = nullptr;
+			ihs_[tab_meta.name] = nullptr;
 		}
 	}
 }
@@ -127,9 +127,7 @@ void SmManager::flush_meta() {
  * @description: 关闭数据库并把数据落盘
  */
 void SmManager::close_db() {
-	flush_meta();
-	db_.name_.clear();
-	db_.tabs_.clear();
+
 
 	for (auto &[name, handle]: fhs_) {
 		rm_manager_->close_file(handle.get());
@@ -139,6 +137,10 @@ void SmManager::close_db() {
 		ix_manager_->close_index(handle.get());
 	}
 	ihs_.clear();
+
+	flush_meta();
+	db_.name_.clear();
+	db_.tabs_.clear();
 
 	// 回到根目录
 	if (chdir("..") < 0) {
@@ -235,13 +237,10 @@ void SmManager::create_table(const std::string &tab_name, const std::vector<ColD
  * @param {Context*} context
  */
 void SmManager::drop_table(const std::string &tab_name, Context *context) {
-	if (!db_.is_table(tab_name)) {
-		throw TableNotFoundError(tab_name);
-	}
+	auto &tab_meta = db_.get_table(tab_name);
 	rm_manager_->close_file(fhs_[tab_name].get());
 	rm_manager_->destroy_file(tab_name);
 	std::vector<ColMeta> indexes;
-	auto tab_meta = db_.tabs_[tab_name];
 	for (size_t i = 0; i < tab_meta.cols.size(); i++) {
 		if (tab_meta.cols[i].index) {
 			indexes.emplace_back(tab_meta.cols[i]);
@@ -249,8 +248,8 @@ void SmManager::drop_table(const std::string &tab_name, Context *context) {
 	}
 	if (indexes.size()) {
 		ix_manager_->destroy_index(tab_name, indexes);
+		ihs_.erase(tab_name);
 	}
-	ihs_.erase(tab_name);
 	fhs_.erase(tab_name);
 	db_.tabs_.erase(tab_name);
 	flush_meta();

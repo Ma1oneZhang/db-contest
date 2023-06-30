@@ -10,6 +10,7 @@ See the Mulan PSL v2 for more details. */
 
 #include <atomic>
 #include <cstring>
+#include <exception>
 #include <memory>
 #include <netinet/in.h>
 #include <readline/history.h>
@@ -164,6 +165,18 @@ void *client_handler(void *sock_fd) {
 					outfile.open("output.txt", std::ios::out | std::ios::app);
 					outfile << "failure\n";
 					outfile.close();
+				} catch (std::exception e) {
+					std::cerr << e.what() << std::endl;
+					memcpy(data_send, e.what(), strlen(e.what()));
+					data_send[strlen(e.what())] = '\n';
+					data_send[strlen(e.what()) + 1] = '\0';
+					offset = strlen(e.what()) + 1;
+
+					// 将报错信息写入output.txt
+					std::fstream outfile;
+					outfile.open("output.txt", std::ios::out | std::ios::app);
+					outfile << "failure\n";
+					outfile.close();
 				}
 			}
 		}
@@ -193,8 +206,8 @@ void *client_handler(void *sock_fd) {
 		// 	txn_manager->commit(context->txn_, context->log_mgr_);
 		// }
 	}
-	// buffer_pool_manager->flush_all_pages();
-	// sm_manager->flush_meta();
+	buffer_pool_manager->flush_all_pages();
+	sm_manager->flush_meta();
 	// Clear
 	std::cout << "Terminating current client_connection..." << std::endl;
 	close(fd);         // close a file descriptor.
