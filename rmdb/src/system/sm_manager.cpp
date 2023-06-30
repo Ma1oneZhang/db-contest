@@ -94,14 +94,16 @@ void SmManager::open_db(const std::string &db_name) {
 	if (chdir(db_name.c_str()) < 0) {// 进入名为db_name的目录
 		throw UnixError();
 	}
+	// read the meta file
 	std::ifstream disk_meta_file(DB_META_NAME);
 	disk_meta_file >> db_;
-	for (auto &[table_name, tab]: db_.tabs_) {
+	// take open the data_file
+	for (auto &[table_name, tab_meta]: db_.tabs_) {
 		fhs_[table_name] = rm_manager_->open_file(table_name);
 		std::vector<ColMeta> indexes;
-		for (size_t i = 0; i < tab.cols.size(); i++) {
-			if (tab.cols[i].index) {
-				indexes.emplace_back(tab.cols[i]);
+		for (size_t i = 0; i < tab_meta.cols.size(); i++) {
+			if (tab_meta.cols[i].index) {
+				indexes.emplace_back(tab_meta.cols[i]);
 			}
 		}
 		if (indexes.size()) {
@@ -126,6 +128,9 @@ void SmManager::flush_meta() {
  */
 void SmManager::close_db() {
 	flush_meta();
+	db_.name_.clear();
+	db_.tabs_.clear();
+
 	for (auto &[name, handle]: fhs_) {
 		rm_manager_->close_file(handle.get());
 	}
@@ -134,8 +139,7 @@ void SmManager::close_db() {
 		ix_manager_->close_index(handle.get());
 	}
 	ihs_.clear();
-	db_.name_.clear();
-	db_.tabs_.clear();
+
 	// 回到根目录
 	if (chdir("..") < 0) {
 		throw UnixError();
@@ -236,6 +240,17 @@ void SmManager::drop_table(const std::string &tab_name, Context *context) {
 	}
 	rm_manager_->close_file(fhs_[tab_name].get());
 	rm_manager_->destroy_file(tab_name);
+	std::vector<ColMeta> indexes;
+	auto tab_meta = db_.tabs_[tab_name];
+	for (size_t i = 0; i < tab_meta.cols.size(); i++) {
+		if (tab_meta.cols[i].index) {
+			indexes.emplace_back(tab_meta.cols[i]);
+		}
+	}
+	if (indexes.size()) {
+		ix_manager_->destroy_index(tab_name, indexes);
+	}
+	ihs_.erase(tab_name);
 	fhs_.erase(tab_name);
 	db_.tabs_.erase(tab_name);
 	flush_meta();

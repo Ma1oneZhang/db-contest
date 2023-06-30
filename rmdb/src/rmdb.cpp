@@ -135,24 +135,22 @@ void *client_handler(void *sock_fd) {
 					std::shared_ptr<PortalStmt> portalStmt = portal->start(plan, context);
 					portal->run(portalStmt, ql_manager.get(), &txn_id, context);
 					portal->drop();
-				}
-				// catch (TransactionAbortException &e) {
-				// // 事务需要回滚，需要把abort信息返回给客户端并写入output.txt文件中
-				// std::string str = "abort\n";
-				// memcpy(data_send, str.c_str(), str.length());
-				// data_send[str.length()] = '\0';
-				// offset = str.length();
+				} catch (TransactionAbortException &e) {
+					// 事务需要回滚，需要把abort信息返回给客户端并写入output.txt文件中
+					std::string str = "abort\n";
+					memcpy(data_send, str.c_str(), str.length());
+					data_send[str.length()] = '\0';
+					offset = str.length();
 
-				// // 回滚事务
-				// txn_manager->abort(context->txn_, log_manager.get());
-				// std::cout << e.GetInfo() << std::endl;
+					// 回滚事务
+					txn_manager->abort(context->txn_, log_manager.get());
+					std::cout << e.GetInfo() << std::endl;
 
-				// std::fstream outfile;
-				// outfile.open("output.txt", std::ios::out | std::ios::app);
-				// outfile << str;
-				// outfile.close();
-				// }
-				catch (RMDBError &e) {
+					std::fstream outfile;
+					outfile.open("output.txt", std::ios::out | std::ios::app);
+					outfile << str;
+					outfile.close();
+				} catch (RMDBError &e) {
 					// 遇到异常，需要打印failure到output.txt文件中，并发异常信息返回给客户端
 					std::cerr << e.what() << std::endl;
 
@@ -168,7 +166,10 @@ void *client_handler(void *sock_fd) {
 					outfile.close();
 				}
 			}
-		} else {
+		}
+		if (finish_analyze == false) {
+			yy_delete_buffer(buf);
+			pthread_mutex_unlock(buffer_mutex);
 			// send client parse error
 			std::string_view parse_error = "SQL_parse error recheck the sql";
 			memcpy(data_send, parse_error.data(), parse_error.size());
@@ -182,10 +183,6 @@ void *client_handler(void *sock_fd) {
 			outfile << "failure\n";
 			outfile.close();
 		}
-		if (finish_analyze == false) {
-			yy_delete_buffer(buf);
-			pthread_mutex_unlock(buffer_mutex);
-		}
 		// future TODO: 格式化 sql_handler.result, 传给客户端
 		// send result with fixed format, use protobuf in the future
 		if (write(fd, data_send, offset + 1) == -1) {
@@ -196,8 +193,8 @@ void *client_handler(void *sock_fd) {
 		// 	txn_manager->commit(context->txn_, context->log_mgr_);
 		// }
 	}
-	buffer_pool_manager->flush_all_pages();
-	sm_manager->flush_meta();
+	// buffer_pool_manager->flush_all_pages();
+	// sm_manager->flush_meta();
 	// Clear
 	std::cout << "Terminating current client_connection..." << std::endl;
 	close(fd);         // close a file descriptor.

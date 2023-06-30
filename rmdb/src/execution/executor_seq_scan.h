@@ -136,7 +136,7 @@ public:
 	void beginTuple() override {
 		scan_ = std::make_unique<RmScan>(fh_);
 		rid_ = scan_->rid();
-		if (!checkCondition(fh_->get_record(rid_, nullptr))) {
+		if (!is_end() && !checkCondition(fh_->get_record(rid_, nullptr))) {
 			for (scan_->next(); !scan_->is_end(); scan_->next()) {
 				rid_ = scan_->rid();
 				if (checkCondition(fh_->get_record(rid_, nullptr))) {
