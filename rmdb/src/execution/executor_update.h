@@ -119,12 +119,13 @@ public:
 					auto &offset = col->offset;
 					if (col->type == TYPE_FLOAT && set_clause.rhs.type == TYPE_INT) {
 						double *data = (double *) (rec->data + offset);
+						// using built_in type transfer
 						*data = set_clause.rhs.int_val;
 					} else {
 						if (col->type != set_clause.rhs.type) {
 							throw IncompatibleTypeError("", "");
 						}
-						if (col->type == TYPE_STRING && set_clause.rhs.str_val.size() > col->len) {
+						if (col->type == TYPE_STRING && set_clause.rhs.str_val.size() > (size_t) col->len) {
 							throw StringOverflowError();
 						}
 						memcpy(rec->data + offset, set_clause.rhs.raw->data, col->len);

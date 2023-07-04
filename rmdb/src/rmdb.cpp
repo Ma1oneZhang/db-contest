@@ -165,18 +165,6 @@ void *client_handler(void *sock_fd) {
 					outfile.open("output.txt", std::ios::out | std::ios::app);
 					outfile << "failure\n";
 					outfile.close();
-				} catch (std::exception e) {
-					std::cerr << e.what() << std::endl;
-					memcpy(data_send, e.what(), strlen(e.what()));
-					data_send[strlen(e.what())] = '\n';
-					data_send[strlen(e.what()) + 1] = '\0';
-					offset = strlen(e.what()) + 1;
-
-					// 将报错信息写入output.txt
-					std::fstream outfile;
-					outfile.open("output.txt", std::ios::out | std::ios::app);
-					outfile << "failure\n";
-					outfile.close();
 				}
 			}
 		}

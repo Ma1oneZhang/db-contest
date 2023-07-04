@@ -26,10 +26,6 @@ public:
 	virtual size_t tupleLen() const { return 0; };
 
 	virtual const std::vector<ColMeta> &cols() = 0;
-	// 	const {
-	// 	std::vector<ColMeta> *_cols = nullptr;
-	// 	return *_cols;
-	// };
 
 	virtual std::string getType() { return "AbstractExecutor"; };
 
