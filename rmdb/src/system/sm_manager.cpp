@@ -238,6 +238,8 @@ void SmManager::create_table(const std::string &tab_name, const std::vector<ColD
  */
 void SmManager::drop_table(const std::string &tab_name, Context *context) {
 	auto &tab_meta = db_.get_table(tab_name);
+	auto fd = disk_manager_->get_file_fd(tab_name);
+	buffer_pool_manager_->delete_all_pages(fd);
 	rm_manager_->close_file(fhs_[tab_name].get());
 	rm_manager_->destroy_file(tab_name);
 	std::vector<ColMeta> indexes;

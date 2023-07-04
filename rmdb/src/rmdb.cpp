@@ -194,8 +194,6 @@ void *client_handler(void *sock_fd) {
 		// 	txn_manager->commit(context->txn_, context->log_mgr_);
 		// }
 	}
-	buffer_pool_manager->flush_all_pages();
-	sm_manager->flush_meta();
 	// Clear
 	std::cout << "Terminating current client_connection..." << std::endl;
 	close(fd);         // close a file descriptor.
