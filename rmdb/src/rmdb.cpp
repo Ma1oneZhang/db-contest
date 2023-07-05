@@ -233,7 +233,7 @@ void start_server() {
 		std::cout << "Listen error!" << std::endl;
 		exit(1);
 	}
-
+	std::vector<int *> fds;
 	while (!should_exit) {
 		std::cout << "Waiting for new connection..." << std::endl;
 		pthread_t thread_id;
@@ -247,19 +247,23 @@ void start_server() {
 
 		// Block here. Until server accepts a new connection.
 		pthread_mutex_lock(sockfd_mutex);
-		int sockfd = accept(sockfd_server, (struct sockaddr *) (&s_addr_client), (socklen_t *) (&client_length));
-		if (sockfd == -1) {
+		auto sockfd = new int;
+		fds.push_back(sockfd);
+		*sockfd = accept(sockfd_server, (struct sockaddr *) (&s_addr_client), (socklen_t *) (&client_length));
+		if (*sockfd == -1) {
 			std::cout << "Accept error!" << std::endl;
 			continue;// ignore current socket ,continue while loop.
 		}
 
 		// 和客户端建立连接，并开启一个线程负责处理客户端请求
-		if (pthread_create(&thread_id, nullptr, &client_handler, (void *) (&sockfd)) != 0) {
+		if (pthread_create(&thread_id, nullptr, &client_handler, (void *) sockfd) != 0) {
 			std::cout << "Create thread fail!" << std::endl;
 			break;// break while loop
 		}
 	}
-
+	for (auto fd: fds) {
+		delete fd;
+	}
 	// Clear
 	std::cout << " Try to close all client-connection.\n";
 	int ret = shutdown(sockfd_server, SHUT_WR);// shut down the all or part of a full-duplex connection.
