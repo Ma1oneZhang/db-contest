@@ -10,8 +10,6 @@ See the Mulan PSL v2 for more details. */
 
 #include "storage/disk_manager.h"
 
-#include <asm-generic/errno-base.h>
-#include <asm-generic/errno.h>
 #include <assert.h>// for assert
 #include <cerrno>
 #include <mutex>
