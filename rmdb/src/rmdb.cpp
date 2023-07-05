@@ -179,10 +179,10 @@ void *client_handler(void *sock_fd) {
 			offset = parse_error.size() + 1;
 
 			// write illuage sql to output file
-			std::fstream outfile;
-			outfile.open("output.txt", std::ios::out | std::ios::app);
-			outfile << "failure\n";
-			outfile.close();
+			// std::fstream outfile;
+			// outfile.open("output.txt", std::ios::out | std::ios::app);
+			// outfile << "failure\n";
+			// outfile.close();
 		}
 		// future TODO: 格式化 sql_handler.result, 传给客户端
 		// send result with fixed format, use protobuf in the future

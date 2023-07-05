@@ -64,9 +64,10 @@ private:
 			hash_table_[bin_data].emplace_back(std::make_unique<RmRecord>(*right_rec.get()));
 		}
 		// init the iterator
-		std::string bin_data = "notprefix:";
+		std::string bin_data = "n";
 		while (!left_->is_end() && hash_table_.find(bin_data) == hash_table_.end()) {
-			bin_data = "prefix:";
+			bin_data = "p";
+			// p means prefix
 			auto left_rec = left_->Next();
 			for (auto fed_cond: fed_conds_) {
 				auto [is_left, it] = findByColMeta({fed_cond.lhs_col.tab_name, fed_cond.lhs_col.col_name});
