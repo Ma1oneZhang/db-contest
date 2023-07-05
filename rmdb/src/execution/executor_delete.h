@@ -9,6 +9,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #pragma once
+#include "defs.h"
 #include "execution_defs.h"
 #include "execution_manager.h"
 #include "executor_abstract.h"
@@ -52,22 +53,32 @@ private:
 				rhs = rec->data + rhs_col->offset;
 			}
 			int cmp;
-			if (rhs_type == TYPE_FLOAT) {
-				if (col->type == TYPE_INT) {
-					cmp = ix_compare((int *) lhs, (double *) rhs, rhs_type, col->len);
-				} else if (col->type == TYPE_FLOAT) {
-					cmp = ix_compare((double *) lhs, (double *) rhs, rhs_type, col->len);
-				}
-			} else if (rhs_type == TYPE_INT) {
-				if (col->type == TYPE_INT) {
-					cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
-				} else if (col->type == TYPE_FLOAT) {
-					cmp = ix_compare((double *) lhs, (int *) rhs, rhs_type, col->len);
-				}
-			} else {
-				assert(col->type == col->type);
-				// force it to compare by bytes
-				cmp = ix_compare(lhs, rhs, TYPE_STRING, col->len);
+			// if (rhs_type == TYPE_FLOAT) {
+			// 	if (col->type == TYPE_INT) {
+			// 		cmp = ix_compare((int *) lhs, (double *) rhs, rhs_type, col->len);
+			// 	} else if (col->type == TYPE_FLOAT) {
+			// 		cmp = ix_compare((double *) lhs, (double *) rhs, rhs_type, col->len);
+			// 	}
+			// } else if (rhs_type == TYPE_INT) {
+			// 	if (col->type == TYPE_INT) {
+			// 		cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
+			// 	} else if (col->type == TYPE_FLOAT) {
+			// 		cmp = ix_compare((double *) lhs, (int *) rhs, rhs_type, col->len);
+			// 	}
+			// } else {
+			// 	assert(col->type == col->type);
+			// 	// force it to compare by bytes
+			// 	cmp = ix_compare(lhs, rhs, TYPE_STRING, col->len);
+			// }
+			if (rhs_type != col->type) {
+				throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+			}
+			if (col->type == TYPE_INT) {
+				cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
+			} else if (col->type == TYPE_FLOAT) {
+				cmp = ix_compare((double *) lhs, (double *)rhs, rhs_type, col->len);
+			} else if (col->type == TYPE_STRING) {
+				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
 			}
 			switch (cond.op) {
 				case OP_EQ:
