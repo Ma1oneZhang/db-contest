@@ -1,6 +1,6 @@
 %{
 #include "ast.h"
-#include "yacc.tab.h"
+#include "yacc.tab.hpp"
 #include <iostream>
 #include <memory>
 
@@ -22,7 +22,7 @@ using namespace ast;
 
 // keywords
 %token SHOW TABLES CREATE TABLE DROP DESC INSERT INTO VALUES DELETE FROM ASC ORDER BY
-WHERE UPDATE SET SELECT INT CHAR FLOAT INDEX AND JOIN EXIT HELP TXN_BEGIN TXN_COMMIT TXN_ABORT TXN_ROLLBACK ORDER_BY
+WHERE UPDATE SET SELECT INT CHAR FLOAT INDEX DATETIME AND JOIN EXIT HELP TXN_BEGIN TXN_COMMIT TXN_ABORT TXN_ROLLBACK ORDER_BY
 // non-keywords
 %token LEQ NEQ GEQ T_EOF
 
@@ -187,6 +187,10 @@ type:
     |   CHAR '(' VALUE_INT ')'
     {
         $$ = std::make_shared<TypeLen>(SV_TYPE_STRING, $3);
+    }
+    |   DATETIME
+    {
+        $$ = std::make_shared<TypeLen>(SV_TYPE_DATETIME, 19);
     }
     |   FLOAT
     {

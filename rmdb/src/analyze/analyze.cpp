@@ -136,8 +136,17 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 		check_clause({x->tab_name}, query->conds);
 	} else if (auto x = std::dynamic_pointer_cast<ast::InsertStmt>(parse)) {
 		// 处理insert 的values值
-		for (auto &sv_val: x->vals) {
-			query->values.push_back(convert_sv_value(sv_val));
+		for (size_t i = 0; i < x->vals.size(); i ++ ) {
+			auto &sv_val = x->vals[i]; 
+			auto &tab_name_ = x->tab_name;
+			auto &col_type = sm_manager_->db_.get_table(tab_name_).cols[i].type; 
+			
+			if (col_type != TYPE_DATETIME) {
+				query->values.push_back(convert_sv_value(sv_val));
+			} 
+			if (col_type == TYPE_DATETIME) {
+				query->values.push_back(convert_sv_value(sv_val, col_type));
+			}
 		}
 	} else {
 
@@ -238,6 +247,9 @@ void Analyze::check_clause(const std::vector<std::string> &tab_names, std::vecto
 				continue;
 			}
 		}
+		if (lhs_type == TYPE_DATETIME && rhs_type == TYPE_STRING) {
+			continue; 
+		}
 		if (lhs_type != rhs_type) {
 			throw IncompatibleTypeError(coltype2str(lhs_type), coltype2str(rhs_type));
 		}
@@ -256,6 +268,33 @@ Value Analyze::convert_sv_value(const std::shared_ptr<ast::Value> &sv_val) {
 	} else {
 		throw InternalError("Unexpected sv value type");
 	}
+	return val;
+}
+
+Value Analyze::convert_sv_value(const std::shared_ptr<ast::Value> &sv_val,  ColType type) {
+	Value val;
+	if (auto str_lit = std::dynamic_pointer_cast<ast::StringLit>(sv_val)) {
+		//check the datetime is legitimate
+		auto datetime = str_lit->val.c_str(); 
+		int yy, mm, dd, h, m, s; 
+		sscanf(datetime, "%d-%d-%d %d:%d:%d", &yy, &mm, &dd, &h, &m, &s);
+		if (strlen(datetime) != 19
+				|| yy < 1000 || yy > 9999
+				|| mm < 1 || mm > 12 
+				|| dd < 1 || (mm != 2 && dd > month_[mm])
+				|| (mm == 2 && (((0 == yy % 4 && yy % 100 != 0) || (0 == yy % 400)) ? dd > 29 : dd > 28))
+				|| h < 0 || h > 23 
+				|| m < 0 || m > 59 		
+				|| s < 0 || s > 59) {
+
+			throw DatetimeError("Datetime format error");
+		}
+
+		val.set_datetime(str_lit->val);
+	} else {
+		throw DatetimeError("Datetime type error");
+	}
+
 	return val;
 }
 

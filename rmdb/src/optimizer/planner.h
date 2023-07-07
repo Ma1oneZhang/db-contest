@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "execution/execution_defs.h"
 #include "execution/execution_manager.h"
+#include "parser/ast.h"
 #include "record/rm.h"
 #include "system/sm.h"
 #include "common/context.h"
@@ -52,7 +53,11 @@ class Planner {
 
     ColType interp_sv_type(ast::SvType sv_type) {
         std::map<ast::SvType, ColType> m = {
-            {ast::SV_TYPE_INT, TYPE_INT}, {ast::SV_TYPE_FLOAT, TYPE_FLOAT}, {ast::SV_TYPE_STRING, TYPE_STRING}};
+            {ast::SV_TYPE_INT, TYPE_INT}, 
+            {ast::SV_TYPE_FLOAT, TYPE_FLOAT},
+            {ast::SV_TYPE_STRING, TYPE_STRING},
+            {ast::SV_TYPE_DATETIME, TYPE_DATETIME}
+             };
         return m.at(sv_type);
     }
 };

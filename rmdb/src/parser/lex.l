@@ -12,7 +12,7 @@
 
 %{
 #include "ast.h"
-#include "yacc.tab.h"
+#include "yacc.tab.hpp"
 #include <iostream>
 
 // automatically update location
@@ -55,7 +55,7 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
 {white_space} { /* ignore white space */ }
 {new_line} { /* ignore new line */ }
     /* keywords */
-"SHOW" { return SHOW; }
+"SHOW"  { return SHOW; }
 "BEGIN" { return TXN_BEGIN; }
 "COMMIT" { return TXN_COMMIT; }
 "ABORT" { return TXN_ABORT; }
@@ -85,6 +85,7 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
 "ORDER" { return ORDER; }
 "BY" {  return BY;  }
 "ASC" { return ASC; }
+"DATETIME" { return DATETIME; }
     /* operators */
 ">=" { return GEQ; }
 "<=" { return LEQ; }

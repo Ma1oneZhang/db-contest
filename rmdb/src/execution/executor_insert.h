@@ -9,6 +9,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #pragma once
+#include "defs.h"
 #include "execution_defs.h"
 #include "execution_manager.h"
 #include "executor_abstract.h"
@@ -43,11 +44,14 @@ public:
 		for (size_t i = 0; i < values_.size(); i++) {
 			auto &col = tab_.cols[i];
 			auto &val = values_[i];
-			if (col.type != val.type) {
+		
+
+			if (col.type == val.type || (col.type == TYPE_DATETIME && val.type == TYPE_STRING)) {
+				val.init_raw(col.len);
+				memcpy(rec.data + col.offset, val.raw->data, col.len);
+			} else { //type not equal && val is not TYPE_DATETIME
 				throw IncompatibleTypeError(coltype2str(col.type), coltype2str(val.type));
 			}
-			val.init_raw(col.len);
-			memcpy(rec.data + col.offset, val.raw->data, col.len);
 		}
 		// Insert into record file
 		rid_ = fh_->insert_record(rec.data, context_);
