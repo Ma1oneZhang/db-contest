@@ -15,7 +15,24 @@ See the Mulan PSL v2 for more details. */
 
 int main() {
 	std::vector<std::string> sqls = {
-		"create table tb (a int, b datetime);",
+		"show tables;",
+		"desc tb;",
+		"create table tb (a int, b float, c char(4));",
+		"drop table tb;",
+		"create index tb(a);",
+		"create index tb(a, b, c);",
+		"drop index tb(a, b, c);",
+		"drop index tb(b);",
+		"insert into tb values (1, 3.14, 'pi');",
+		"delete from tb where a = 1;",
+		"update tb set a = 1, b = 2.2, c = 'xyz' where x = 2 and y < 1.1 and z > 'abc';",
+		"select * from tb;",
+		"select * from tb where x <> 2 and y >= 3. and z <= '123' and b < tb.a;",
+		"select x.a, y.b from x, y where x.a = y.b and c = d;",
+		"select x.a, y.b from x join y where x.a = y.b and c = d;",
+		"update grade set score = score + 5 where name = 'Calculus';",
+		"exit;",
+		"help;",
 		"",
 	};
 	for (auto &sql: sqls) {

@@ -46,7 +46,7 @@ public:
 			auto &val = values_[i];
 		
 
-			if (col.type == val.type || (col.type == TYPE_DATETIME && val.type == TYPE_STRING)) {
+			if (col.type == val.type) {
 				val.init_raw(col.len);
 				memcpy(rec.data + col.offset, val.raw->data, col.len);
 			} else { //type not equal && val is not TYPE_DATETIME

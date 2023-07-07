@@ -73,7 +73,7 @@ private:
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
 			} else if (col->type == TYPE_DATETIME) {
-				if (TYPE_STRING != rhs_type) { //只能和字符串比较
+				if (col->type != rhs_type) {
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
 				cmp = ix_compare(lhs, rhs, rhs_type, col->len);

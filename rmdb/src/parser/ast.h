@@ -8,7 +8,7 @@ EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
 MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 #pragma once
-
+#include "defs.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -138,6 +138,12 @@ namespace ast {
 		std::string val;
 
 		StringLit(std::string val_) : val(std::move(val_)) {}
+	};
+
+	struct DatetimeLit : public Value {
+		Datetime val;
+
+		DatetimeLit(Datetime val_) : val(std::move(val_)) {}
 	};
 
 	struct Col : public Expr {
