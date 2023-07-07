@@ -149,8 +149,11 @@ namespace ast {
 	struct SetClause : public TreeNode {
 		std::string col_name;
 		std::shared_ptr<Value> val;
-
-		SetClause(std::string col_name_, std::shared_ptr<Value> val_) : col_name(std::move(col_name_)), val(std::move(val_)) {}
+		bool is_self;
+		int op;
+		//  + - * /
+		SetClause(std::string col_name_, std::shared_ptr<Value> val_) : col_name(std::move(col_name_)), val(std::move(val_)) { is_self = false; }
+		SetClause(std::string col_name_, std::shared_ptr<Value> val_, int op_) : col_name(std::move(col_name_)), val(std::move(val_)), op(op_) { is_self = true; }
 	};
 
 	struct BinaryExpr : public TreeNode {

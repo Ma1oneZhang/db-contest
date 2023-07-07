@@ -322,6 +322,22 @@ setClause:
     {
         $$ = std::make_shared<SetClause>($1, $3);
     }
+    |   colName '=' colName '+' value
+    {
+        $$ = std::make_shared<SetClause>($1, $5, 0);
+    }
+    |   colName '=' colName '-' value
+    {
+        $$ = std::make_shared<SetClause>($1, $5, 1);
+    }
+    |   colName '=' colName '*' value
+    {
+        $$ = std::make_shared<SetClause>($1, $5, 2);
+    }
+    |   colName '=' colName '/' value
+    {
+        $$ = std::make_shared<SetClause>($1, $5, 3);
+    }
     ;
 
 selector:

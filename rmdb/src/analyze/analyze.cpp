@@ -85,18 +85,30 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 				val.type = TYPE_INT;
 				val.set_int(x->val);
 				val.raw = std::make_shared<RmRecord>(sizeof(int), (char *) (&x->val));
-				query->set_clauses.push_back({tab_col, val});
+				if (!clause->is_self) {
+					query->set_clauses.emplace_back(tab_col, val);
+				} else {
+					query->set_clauses.emplace_back(tab_col, val, clause->op);
+				}
 			} else if (auto x = std::dynamic_pointer_cast<ast::FloatLit>(clause->val)) {
 				Value val;
 				val.type = TYPE_FLOAT;
 				val.set_float(x->val);
 				val.raw = std::make_shared<RmRecord>(sizeof(double), (char *) (&x->val));
-				query->set_clauses.push_back({tab_col, val});
+				if (!clause->is_self) {
+					query->set_clauses.emplace_back(tab_col, val);
+				} else {
+					query->set_clauses.emplace_back(tab_col, val, clause->op);
+				}
 			} else if (auto x = std::dynamic_pointer_cast<ast::StringLit>(clause->val)) {
+				if (clause->is_self) {
+					throw RMDBError("Unsupported operation");
+				}
 				Value val;
 				val.type = TYPE_STRING;
+				val.set_str(x->val);
 				val.raw = std::make_shared<RmRecord>((int) x->val.size(), const_cast<char *>(x->val.c_str()));
-				query->set_clauses.push_back({tab_col, val});
+				query->set_clauses.emplace_back(tab_col, val);
 			}// TODO new type
 		}
 

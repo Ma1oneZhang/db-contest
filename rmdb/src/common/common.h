@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include <cassert>
 #include <cstring>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -53,7 +54,7 @@ struct Value {
 		str_val = std::move(str_val_);
 	}
 
-	void init_raw(int len) {
+	void init_raw(size_t len) {
 		assert(raw == nullptr);
 		raw = std::make_shared<RmRecord>(len);
 		if (type == TYPE_INT) {
@@ -63,12 +64,22 @@ struct Value {
 			assert(len == sizeof(double));
 			*(double *) (raw->data) = float_val;
 		} else if (type == TYPE_STRING) {
-			if (len < (int) str_val.size()) {
+			if (len < str_val.size()) {
 				throw StringOverflowError();
 			}
 			memset(raw->data, 0, len);
 			memcpy(raw->data, str_val.c_str(), str_val.size());
 		}
+	}
+
+	void str_resize(size_t len) {
+		assert(type == TYPE_STRING);
+		if (len < str_val.size()) {
+			throw StringOverflowError();
+		}
+		raw = std::make_shared<RmRecord>(len);
+		memset(raw->data, 0, len);
+		memcpy(raw->data, str_val.c_str(), str_val.size());
 	}
 };
 
@@ -87,7 +98,40 @@ struct Condition {
 	Value rhs_val;  // right-hand side value
 };
 
+enum class SetClauseOp {
+	SELF_ADD,
+	SELF_SUB,
+	SELF_MUT,
+	SELF_DIV
+};
+
 struct SetClause {
 	TabCol lhs;
 	Value rhs;
+	bool is_self;
+	SetClauseOp op;
+	SetClause(TabCol lhs_, Value rhs_) {
+		is_self = false;
+		lhs = lhs_, rhs = rhs_;
+	}
+	SetClause(TabCol lhs_, Value rhs_, int op_) {
+		is_self = true;
+		lhs = lhs_, rhs = rhs_;
+		switch (op_) {
+			case 0:
+				op = SetClauseOp::SELF_ADD;
+				break;
+			case 1:
+				op = SetClauseOp::SELF_SUB;
+				break;
+			case 2:
+				op = SetClauseOp::SELF_MUT;
+				break;
+			case 3:
+				op = SetClauseOp::SELF_DIV;
+				break;
+			default:
+				throw std::logic_error("illegal operation");
+		}
+	}
 };
