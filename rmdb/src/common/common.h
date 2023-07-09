@@ -36,6 +36,7 @@ struct Value {
 		double float_val;// float value
 	};
 	std::string str_val;// string value
+	Datetime datetime_val; //datetime value;
 
 	std::shared_ptr<RmRecord> raw;// raw record buffer
 
@@ -54,6 +55,11 @@ struct Value {
 		str_val = std::move(str_val_);
 	}
 
+	void set_datetime(Datetime str_val_) {
+		type = TYPE_DATETIME;
+		datetime_val = std::move(str_val_);
+	}
+
 	void init_raw(size_t len) {
 		assert(raw == nullptr);
 		raw = std::make_shared<RmRecord>(len);
@@ -69,6 +75,13 @@ struct Value {
 			}
 			memset(raw->data, 0, len);
 			memcpy(raw->data, str_val.c_str(), str_val.size());
+		} 
+		else if (type == TYPE_DATETIME) {
+			if (len < datetime_val.val.size()) {
+				throw StringOverflowError();
+			}
+			memset(raw->data, 0, datetime_val.val.size());
+			memcpy(raw->data, datetime_val.val.c_str(), datetime_val.val.size());
 		}
 	}
 

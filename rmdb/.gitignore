@@ -6,3 +6,4 @@ deps/googletest
 .cache
 ./deps/googletest
 compile_commands.json
+/test

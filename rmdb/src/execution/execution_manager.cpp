@@ -10,6 +10,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "execution_manager.h"
 
+#include "defs.h"
 #include "executor_delete.h"
 #include "executor_index_scan.h"
 #include "executor_insert.h"
@@ -154,6 +155,9 @@ void QlManager::select_from(std::unique_ptr<AbstractExecutor> executorTreeRoot, 
 			} else if (col.type == TYPE_STRING) {
 				col_str = std::string((char *) rec_buf, col.len);
 				col_str.resize(strlen(col_str.c_str()));
+			} else if (col.type == TYPE_DATETIME) {
+				col_str = std::string((char *) rec_buf, col.len);
+				// col_str.resize(strlen(col_str.c_str()));
 			}
 			columns.push_back(col_str);
 		}

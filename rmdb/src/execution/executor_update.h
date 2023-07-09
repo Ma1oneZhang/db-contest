@@ -67,6 +67,12 @@ private:
 				cond.rhs_val.str_resize(col->len);
 				rhs = cond.rhs_val.raw->data;
 				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
+			} else if (col->type == TYPE_DATETIME) {
+				if (col->type != rhs_type) {
+					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+				}
+				rhs = cond.rhs_val.raw->data;
+				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
 			} else {
 				// somewhere unkonwn
 				throw std::logic_error("somewhere unkonwn");
@@ -157,6 +163,8 @@ public:
 							}
 							if (col->type == TYPE_STRING) {
 								set_clause.rhs.str_resize(col->len);
+							} else if (col->type == TYPE_DATETIME) {
+								// set_clause.rhs.str_resize(col->len);
 							}
 							memcpy(rec->data + offset, set_clause.rhs.raw->data, col->len);
 						}
