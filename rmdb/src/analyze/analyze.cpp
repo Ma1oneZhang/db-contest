@@ -277,6 +277,9 @@ void Analyze::check_clause(const std::vector<std::string> &tab_names, std::vecto
 		if (lhs_type == TYPE_BIGINT && rhs_type == TYPE_INT) {
 			continue;
 		}
+		if (lhs_type == TYPE_INT && rhs_type == TYPE_BIGINT) {
+			continue;
+		}
 		if (lhs_type == TYPE_FLOAT && rhs_type == TYPE_BIGINT) {
 			continue;
 		}
