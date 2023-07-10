@@ -48,31 +48,41 @@ private:
 			}
 			int cmp;
 			if (col->type == TYPE_INT) {
+				// handle int type
 				if (col->type != rhs_type) {
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
 				cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
 			} else if (col->type == TYPE_FLOAT) {
+				// handle float type
 				if (rhs_type == TYPE_INT) {
 					cmp = ix_compare((double *) lhs, (int *) rhs, rhs_type, col->len);
 				} else if (rhs_type == TYPE_FLOAT) {
 					cmp = ix_compare((double *) lhs, (double *) rhs, rhs_type, col->len);
+				} else if (rhs_type == TYPE_BIGINT) {
+					cmp = ix_compare((double *) lhs, (int64_t *) rhs, rhs_type, col->len);
 				} else {
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
 			} else if (col->type == TYPE_STRING) {
+				// handle string type
 				if (col->type != rhs_type) {
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
-				cond.rhs_val.str_resize(col->len);
-				rhs = cond.rhs_val.raw->data;
 				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
 			} else if (col->type == TYPE_DATETIME) {
 				if (col->type != rhs_type) {
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
-				rhs = cond.rhs_val.raw->data;
 				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
+			} else if (col->type == TYPE_BIGINT) {
+				if (rhs_type == TYPE_INT) {
+					cmp = ix_compare((int64_t *) lhs, (int *) rhs, rhs_type, col->len);
+				} else if (rhs_type == TYPE_BIGINT) {
+					cmp = ix_compare((int64_t *) lhs, (int64_t *) rhs, rhs_type, col->len);
+				} else {
+					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+				}
 			} else {
 				// somewhere unkonwn
 				throw std::logic_error("somewhere unkonwn");
@@ -154,6 +164,14 @@ public:
 							double *data = (double *) (rec->data + offset);
 							// using built_in type transfer
 							*data = set_clause.rhs.int_val;
+						} else if (col->type == TYPE_FLOAT && set_clause.rhs.type == TYPE_BIGINT) {
+							double *data = (double *) (rec->data + offset);
+							// using built_in type transfer
+							*data = set_clause.rhs.bigint_val;
+						} else if (col->type == TYPE_BIGINT && set_clause.rhs.type == TYPE_INT) {
+							int64_t *data = (int64_t *) (rec->data + offset);
+							// using built_in type transfer
+							*data = set_clause.rhs.int_val;
 						} else {
 							if (col->type != set_clause.rhs.type) {
 								throw IncompatibleTypeError(coltype2str(col->type), coltype2str(set_clause.rhs.type));
@@ -163,8 +181,6 @@ public:
 							}
 							if (col->type == TYPE_STRING) {
 								set_clause.rhs.str_resize(col->len);
-							} else if (col->type == TYPE_DATETIME) {
-								// set_clause.rhs.str_resize(col->len);
 							}
 							memcpy(rec->data + offset, set_clause.rhs.raw->data, col->len);
 						}
@@ -179,8 +195,17 @@ public:
 								doOperation(lhs, (int *) set_clause.rhs.raw->data, set_clause.op);
 							} else if (set_clause.rhs.type == TYPE_FLOAT) {
 								doOperation(lhs, (double *) set_clause.rhs.raw->data, set_clause.op);
+							} else if (set_clause.rhs.type == TYPE_BIGINT) {
+								doOperation(lhs, (int64_t*) set_clause.rhs.raw->data, set_clause.op);
 							} else {
 								throw std::logic_error("Todo for int64 type");
+							}
+						} else if (col->type == TYPE_BIGINT) {
+							auto lhs = (int64_t *) (rec->data + offset);
+							if (set_clause.rhs.type == TYPE_INT) {
+								doOperation(lhs, (int *) set_clause.rhs.raw->data, set_clause.op);
+							} else if (set_clause.rhs.type == TYPE_BIGINT) {
+								doOperation(lhs, (int64_t *) set_clause.rhs.raw->data, set_clause.op);
 							}
 						} else {
 							// somewhere unkonwn

@@ -12,7 +12,7 @@
 
 %{
 #include "ast.h"
-#include "yacc.tab.hpp"
+#include "yacc.tab.h"
 #include <iostream>
 
 // automatically update location
@@ -77,6 +77,7 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
 "INT" { return INT; }
 "CHAR" { return CHAR; }
 "FLOAT" { return FLOAT; }
+"BIGINT" {return BIGINT; }
 "INDEX" { return INDEX; }
 "AND" { return AND; }
 "JOIN" {return JOIN;}
@@ -98,8 +99,18 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
 }
     /* literals */
 {value_int} {
-    yylval->sv_int = atoi(yytext);
-    return VALUE_INT;
+    auto number = std::string(yytext);
+    try{
+        yylval->sv_int = stoi(number);
+        return VALUE_INT;
+    }catch (std::out_of_range const& ex){
+        try{
+            yylval->sv_bigint = stoll(number);
+            return VALUE_BIGINT;
+        }catch (std::out_of_range const& ex){
+            return 0;
+        }
+    }
 }
 {value_float} {
     yylval->sv_float = atof(yytext);

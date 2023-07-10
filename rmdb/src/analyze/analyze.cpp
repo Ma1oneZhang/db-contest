@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 #include "errors.h"
 #include "parser/ast.h"
 #include "utils/log.h"
+#include <memory>
 #include <unordered_map>
 /**
  * @description: 分析器，进行语义分析和查询重写，需要检查不符合语义规定的部分
@@ -105,27 +106,30 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 				if (clause->is_self) {
 					throw RMDBError("Unsupported operation");
 				}
-
 				auto &lhs_tab = sm_manager_->db_.get_table(tab_col.tab_name);
 				auto lhs_col = lhs_tab.get_col(tab_col.col_name);
 				auto lhs_type = lhs_col->type;
-
+				Value val;
 				if (lhs_type == TYPE_DATETIME) {
-					Value val;
 					val.type = TYPE_DATETIME;
 					val.set_datetime(str_lit->val);
-					val.raw = std::make_shared<RmRecord>((int) str_lit->val.size(), const_cast<char *>(str_lit->val.c_str()));
-					query->set_clauses.emplace_back(tab_col, val);
 				} else {
-					Value val;
 					val.type = TYPE_STRING;
 					val.set_str(str_lit->val);
-					val.raw = std::make_shared<RmRecord>((int) str_lit->val.size(), const_cast<char *>(str_lit->val.c_str()));
-					query->set_clauses.emplace_back(tab_col, val);
 				}
-
-
-			} // TODO new type
+				val.raw = std::make_shared<RmRecord>((int) str_lit->val.size(), const_cast<char *>(str_lit->val.c_str()));
+				query->set_clauses.emplace_back(tab_col, val);
+			} else if (auto bigint_lit = std::dynamic_pointer_cast<ast::BigintLit>(clause->val)) {
+				Value val;
+				val.type = TYPE_BIGINT;
+				val.set_bigint(x->val);
+				val.raw = std::make_shared<RmRecord>(sizeof(int64_t), (char *) (&x->val));
+				if (!clause->is_self) {
+					query->set_clauses.emplace_back(tab_col, val);
+				} else {
+					query->set_clauses.emplace_back(tab_col, val, clause->op);
+				}
+			}
 		}
 
 		std::vector<ColMeta> all_cols;
@@ -144,19 +148,17 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 			}
 		}
 		// handle the where condition
-		get_clause(x->conds, query->conds,query->tables);
+		get_clause(x->conds, query->conds, query->tables);
 		check_clause(query->tables, query->conds);
 	} else if (auto x = std::dynamic_pointer_cast<ast::DeleteStmt>(parse)) {
 		//处理where条件
 		get_clause(x->conds, query->conds, {x->tab_name});
 		check_clause({x->tab_name}, query->conds);
 	} else if (auto x = std::dynamic_pointer_cast<ast::InsertStmt>(parse)) {
-
 		// 处理insert 的values值
-		for (size_t i = 0; i < x->vals.size(); i ++ ) {
-			auto &sv_val = x->vals[i]; 
+		for (size_t i = 0; i < x->vals.size(); i++) {
+			auto &sv_val = x->vals[i];
 			auto &col_type = sm_manager_->db_.get_table(x->tab_name).cols[i].type;
-
 			query->values.push_back(convert_sv_value(sv_val, col_type));
 		}
 	} else {
@@ -216,8 +218,8 @@ void Analyze::get_clause(const std::vector<std::shared_ptr<ast::BinaryExpr>> &sv
 		cond.op = convert_sv_comp_op(expr->op);
 		if (auto rhs_val = std::dynamic_pointer_cast<ast::Value>(expr->rhs)) {
 			cond.is_rhs_val = true;
-			
-			//get the col type; 
+
+			//get the col type;
 			auto &lhs_tab = sm_manager_->db_.get_table(tab_names[0]);
 			auto lhs_col = lhs_tab.get_col(cond.lhs_col.col_name);
 			auto lhs_type = lhs_col->type;
@@ -256,7 +258,9 @@ void Analyze::check_clause(const std::vector<std::string> &tab_names, std::vecto
 			} else if (cond.rhs_val.type == TYPE_STRING) {
 				cond.rhs_val.init_raw(lhs_col->len);
 			} else if (cond.rhs_val.type == TYPE_DATETIME) {
-				cond.rhs_val.init_raw(lhs_col->len); 
+				cond.rhs_val.init_raw(lhs_col->len);
+			} else if (cond.rhs_val.type == TYPE_BIGINT) {
+				cond.rhs_val.init_raw(sizeof(int64_t));
 			}
 			rhs_type = cond.rhs_val.type;
 		} else {
@@ -269,7 +273,10 @@ void Analyze::check_clause(const std::vector<std::string> &tab_names, std::vecto
 				continue;
 			}
 		}
-		
+
+		if (lhs_type == TYPE_BIGINT && rhs_type == TYPE_INT) {
+			continue;
+		}
 		if (lhs_type != rhs_type) {
 			throw IncompatibleTypeError(coltype2str(lhs_type), coltype2str(rhs_type));
 		}
@@ -279,17 +286,19 @@ void Analyze::check_clause(const std::vector<std::string> &tab_names, std::vecto
 
 Value Analyze::convert_sv_value(const std::shared_ptr<ast::Value> &sv_val, ColType type) {
 	Value val;
-	
+
 	if (auto int_lit = std::dynamic_pointer_cast<ast::IntLit>(sv_val)) {
 		val.set_int(int_lit->val);
 	} else if (auto float_lit = std::dynamic_pointer_cast<ast::FloatLit>(sv_val)) {
 		val.set_float(float_lit->val);
 	} else if (auto str_lit = std::dynamic_pointer_cast<ast::StringLit>(sv_val)) {
 		if (type == TYPE_DATETIME) {
-			val.set_datetime(str_lit->val); 
+			val.set_datetime(str_lit->val);
 		} else {
 			val.set_str(str_lit->val);
 		}
+	} else if (auto bigint_lit = std::dynamic_pointer_cast<ast::BigintLit>(sv_val)) {
+		val.set_bigint(bigint_lit->val);
 	} else {
 		throw InternalError("Unexpected sv value type");
 	}

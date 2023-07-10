@@ -25,7 +25,8 @@ namespace ast {
 		SV_TYPE_INT,
 		SV_TYPE_FLOAT,
 		SV_TYPE_STRING,
-		SV_TYPE_DATETIME
+		SV_TYPE_DATETIME,
+		SV_TYPE_BIGINT
 	};
 
 	enum SvCompOp {
@@ -140,6 +141,12 @@ namespace ast {
 		StringLit(std::string val_) : val(std::move(val_)) {}
 	};
 
+	struct BigintLit : public Value {
+		int64_t val;
+
+		BigintLit(int64_t val_) : val(val_){};
+	};
+
 	struct DatetimeLit : public Value {
 		Datetime val;
 
@@ -236,6 +243,7 @@ namespace ast {
 		int sv_int;
 		float sv_float;
 		std::string sv_str;
+		int64_t sv_bigint;
 		OrderByDir sv_orderby_dir;
 		std::vector<std::string> sv_strs;
 

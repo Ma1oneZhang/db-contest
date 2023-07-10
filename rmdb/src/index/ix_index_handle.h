@@ -22,8 +22,10 @@ static const bool binary_search = false;
 template<typename lhs, typename rhs>
 inline int ix_compare(const lhs *a, const rhs *b, ColType type, int col_len) {
 	switch (type) {
+		// numberic type
 		case TYPE_INT:
 		case TYPE_FLOAT:
+		case TYPE_BIGINT:
 			return (*a < *b) ? -1 : ((*a > *b) ? 1 : 0);
 			// 	{
 			// 	int ia = *(int *) a;
@@ -34,8 +36,8 @@ inline int ix_compare(const lhs *a, const rhs *b, ColType type, int col_len) {
 			// 	double fa = *(double *) a;
 			// 	double fb = *(double *) b;
 			// 	return (fa < fb) ? -1 : ((fa > fb) ? 1 : 0);
+			// string like datatype
 		case TYPE_STRING:
-			return memcmp(a, b, col_len);
 		case TYPE_DATETIME:
 			return memcmp(a, b, col_len);
 		default:

@@ -60,28 +60,41 @@ private:
 			}
 			int cmp;
 			if (col->type == TYPE_INT) {
+				// handle int type
 				if (col->type != rhs_type) {
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
 				cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
 			} else if (col->type == TYPE_FLOAT) {
+				// handle float type
 				if (rhs_type == TYPE_INT) {
 					cmp = ix_compare((double *) lhs, (int *) rhs, rhs_type, col->len);
 				} else if (rhs_type == TYPE_FLOAT) {
 					cmp = ix_compare((double *) lhs, (double *) rhs, rhs_type, col->len);
+				} else if (rhs_type == TYPE_BIGINT) {
+					cmp = ix_compare((double *) lhs, (int64_t *) rhs, rhs_type, col->len);
 				} else {
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
+			} else if (col->type == TYPE_STRING) {
+				// handle string type
+				if (col->type != rhs_type) {
+					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+				}
+				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
 			} else if (col->type == TYPE_DATETIME) {
 				if (col->type != rhs_type) {
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
 				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
-			} else if (col->type == TYPE_STRING) {
-				if (col->type != rhs_type) {
+			} else if (col->type == TYPE_BIGINT) {
+				if (rhs_type == TYPE_INT) {
+					cmp = ix_compare((int64_t *) lhs, (int *) rhs, rhs_type, col->len);
+				} else if (rhs_type == TYPE_BIGINT) {
+					cmp = ix_compare((int64_t *) lhs, (int64_t *) rhs, rhs_type, col->len);
+				} else {
 					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
 				}
-				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
 			} else {
 				// somewhere unkonwn
 				throw std::logic_error("somewhere unkonwn");
