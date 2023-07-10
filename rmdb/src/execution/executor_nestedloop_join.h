@@ -10,6 +10,7 @@ See the Mulan PSL v2 for more details. */
 
 #pragma once
 #include "common/common.h"
+#include "defs.h"
 #include "execution_defs.h"
 #include "execution_manager.h"
 #include "executor_abstract.h"
@@ -19,6 +20,7 @@ See the Mulan PSL v2 for more details. */
 #include "system/sm.h"
 #include "system/sm_meta.h"
 #include <cstring>
+#include <functional>
 #include <memory>
 #include <unordered_map>
 #include <utility>
@@ -59,7 +61,15 @@ private:
 					std::swap(fed_cond.lhs_col, fed_cond.rhs_col);
 					it = findByColMeta({fed_cond.rhs_col.tab_name, fed_cond.rhs_col.col_name}).second;
 				}
-				bin_data += std::string(right_rec->data + it->offset, it->len);
+				if (it->type == TYPE_INT) {
+					auto hashed = std::hash<int>{}(*(int *) (right_rec->data + it->offset));
+					bin_data += std::string((char *) &hashed, sizeof(size_t));
+				} else if (it->type == TYPE_BIGINT) {
+					auto hashed = std::hash<int64_t>{}(*(int64_t *) (right_rec->data + it->offset));
+					bin_data += std::string((char *) &hashed, sizeof(size_t));
+				} else {
+					bin_data += std::string(right_rec->data + it->offset, it->len);
+				}
 			}
 			hash_table_[bin_data].emplace_back(std::make_unique<RmRecord>(*right_rec.get()));
 		}
@@ -70,7 +80,15 @@ private:
 			auto left_rec = left_->Next();
 			for (auto fed_cond: fed_conds_) {
 				auto [is_left, it] = findByColMeta({fed_cond.lhs_col.tab_name, fed_cond.lhs_col.col_name});
-				bin_data += std::string(left_rec->data + it->offset, it->len);
+				if (it->type == TYPE_INT) {
+					auto hashed = std::hash<int>{}(*(int *) (left_rec->data + it->offset));
+					bin_data += std::string((char *) &hashed, sizeof(size_t));
+				} else if (it->type == TYPE_BIGINT) {
+					auto hashed = std::hash<int64_t>{}(*(int64_t *) (left_rec->data + it->offset));
+					bin_data += std::string((char *) &hashed, sizeof(size_t));
+				} else {
+					bin_data += std::string(left_rec->data + it->offset, it->len);
+				}
 			}
 			if (hash_table_.find(bin_data) == hash_table_.end())
 				left_->nextTuple();
@@ -153,7 +171,15 @@ public:
 				auto left_rec = left_->Next();
 				for (auto fed_cond: fed_conds_) {
 					auto [is_left, it] = findByColMeta({fed_cond.lhs_col.tab_name, fed_cond.lhs_col.col_name});
-					bin_data += std::string(left_rec->data + it->offset, it->len);
+					if (it->type == TYPE_INT) {
+						auto hashed = std::hash<int>{}(*(int *) (left_rec->data + it->offset));
+						bin_data += std::string((char *) &hashed, sizeof(size_t));
+					} else if (it->type == TYPE_BIGINT) {
+						auto hashed = std::hash<int64_t>{}(*(int64_t *) (left_rec->data + it->offset));
+						bin_data += std::string((char *) &hashed, sizeof(size_t));
+					} else {
+						bin_data += std::string(left_rec->data + it->offset, it->len);
+					}
 				}
 				if (hash_table_.find(bin_data) == hash_table_.end())
 					left_->nextTuple();
