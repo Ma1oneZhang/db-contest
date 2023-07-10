@@ -122,8 +122,8 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 			} else if (auto bigint_lit = std::dynamic_pointer_cast<ast::BigintLit>(clause->val)) {
 				Value val;
 				val.type = TYPE_BIGINT;
-				val.set_bigint(x->val);
-				val.raw = std::make_shared<RmRecord>(sizeof(int64_t), (char *) (&x->val));
+				val.set_bigint(bigint_lit->val);
+				val.raw = std::make_shared<RmRecord>(sizeof(int64_t), (char *) (&bigint_lit->val));
 				if (!clause->is_self) {
 					query->set_clauses.emplace_back(tab_col, val);
 				} else {
