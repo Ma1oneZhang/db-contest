@@ -44,12 +44,12 @@ public:
 		for (size_t i = 0; i < values_.size(); i++) {
 			auto &col = tab_.cols[i];
 			auto &val = values_[i];
-		
-
 			if (col.type == val.type) {
 				val.init_raw(col.len);
 				memcpy(rec.data + col.offset, val.raw->data, col.len);
-			} else { //type not equal && val is not TYPE_DATETIME
+			} else if (col.type == TYPE_BIGINT && val.type == TYPE_INT) {
+				*(int64_t *) (rec.data + col.offset) = val.bigint_val;
+			} else {//type not equal && val is not TYPE_DATETIME
 				throw IncompatibleTypeError(coltype2str(col.type), coltype2str(val.type));
 			}
 		}
