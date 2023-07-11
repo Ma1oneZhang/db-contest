@@ -10,15 +10,19 @@ See the Mulan PSL v2 for more details. */
 
 #include "sm_manager.h"
 
+#include <cstddef>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include <fstream>
+#include <utility>
+#include <vector>
 
 #include "common/config.h"
 #include "errors.h"
 #include "index/ix.h"
 #include "record/rm.h"
+#include "record/rm_scan.h"
 #include "record_printer.h"
 #include "system/sm_meta.h"
 
@@ -250,11 +254,40 @@ void SmManager::drop_table(const std::string &tab_name, Context *context) {
 	}
 	if (indexes.size()) {
 		ix_manager_->destroy_index(tab_name, indexes);
-		ihs_.erase(tab_name);
+		ihs_.erase(tab_name); 
 	}
 	fhs_.erase(tab_name);
 	db_.tabs_.erase(tab_name);
 	flush_meta();
+}
+
+
+/**
+ * @description: 显示索引
+ * @param {string&} tab_name 表的名称
+ * @param {Context*} context
+ */
+void SmManager::show_index(const std::string& tab_name, Context* context) {
+
+	std::fstream outfile;
+	outfile.open("output.txt", std::ios::out | std::ios::app);
+	RecordPrinter printer(1);
+	auto& tab_meta = db_.get_table(tab_name); 
+
+	for (auto index : tab_meta.indexes) {
+		std::string str = ""; 
+		str = "| " + tab_name + " | " + "unique" + " | " + "(";
+		for (size_t i = 0; i < index.col_num; i ++ ) {
+			if (i >= 1) str += ","; 
+			str += index.cols[i].name;
+		}
+		str = str + ")" + " |\n"; 
+
+		printer.print_record({str}, context);
+		outfile << str; 
+	}
+
+	outfile.close();
 }
 
 /**
@@ -264,6 +297,48 @@ void SmManager::drop_table(const std::string &tab_name, Context *context) {
  * @param {Context*} context
  */
 void SmManager::create_index(const std::string &tab_name, const std::vector<std::string> &col_names, Context *context) {
+	auto& tab_meta = db_.get_table(tab_name); 
+
+	//如果当前索引已经存在
+	if (tab_meta.is_index(col_names)) {
+		throw IndexExistsError(tab_name, col_names); 
+	}
+
+	//需要创建的索引
+	std::vector<ColMeta> index_cols;
+	size_t col_tot_len = 0; 
+	for (auto col_name : col_names) {
+		col_tot_len += col_name.size(); 
+		auto col = tab_meta.get_col(col_name); 
+		index_cols.emplace_back(*col); 
+	}
+	
+	if (index_cols.size()) {
+		ix_manager_->create_index(tab_name, index_cols); 
+	}
+
+	auto ih  =ix_manager_->open_index(tab_name, index_cols); 
+	auto file_handle = fhs_.at(tab_name).get(); 
+
+	for (RmScan rm_scan(file_handle); !rm_scan.is_end(); rm_scan.next()) {
+		auto rec = file_handle->get_record(rm_scan.rid(), context); 
+		auto *key = rec->data + index_cols[0].offset;
+		ih->insert_entry(key, rm_scan.rid(), context->txn_); 
+	}
+
+	// index_name = warehouse_id_xxx_xxx.idx
+	auto index_name = ix_manager_->get_index_name(tab_name, index_cols); 
+	assert(ihs_.count(index_name) == 0); 
+	ihs_.emplace(index_name, std::move(ih)); 
+
+
+	//加入索引数据
+	IndexMeta indexes = {.tab_name = tab_name,
+						 .col_tot_len = col_tot_len, 
+						 .col_num = col_names.size(), 
+						 .cols = std::move(index_cols)}; 
+
+	tab_meta.indexes.push_back(indexes); 
 }
 
 /**
@@ -273,6 +348,28 @@ void SmManager::create_index(const std::string &tab_name, const std::vector<std:
  * @param {Context*} context
  */
 void SmManager::drop_index(const std::string &tab_name, const std::vector<std::string> &col_names, Context *context) {
+	auto &tab_meta = db_.tabs_.at(tab_name);
+
+	//当前索引不存在
+	if (!tab_meta.is_index(col_names)) {
+		throw IndexNotFoundError(tab_name, col_names); 
+	}
+
+	//需要创建的索引
+	std::vector<ColMeta> index_cols;
+	for (auto col_name : col_names) {
+		auto col = tab_meta.get_col(col_name); 
+		index_cols.emplace_back(*col); 
+	}
+
+	auto index_name = ix_manager_->get_index_name(tab_name, index_cols); 
+	ix_manager_->close_index(ihs_.at(index_name).get()); 
+	ix_manager_->destroy_index(tab_name, index_cols); 
+	ihs_.erase(index_name); 
+	
+	//删除索引
+	auto indexes = tab_meta.get_index_meta(col_names); 
+	tab_meta.indexes.erase(indexes); 
 }
 
 /**
@@ -282,4 +379,10 @@ void SmManager::drop_index(const std::string &tab_name, const std::vector<std::s
  * @param {Context*} context
  */
 void SmManager::drop_index(const std::string &tab_name, const std::vector<ColMeta> &cols, Context *context) {
+	std::vector<std::string> col_names; 
+	for (auto col : cols) {
+		col_names.emplace_back(col.name); 
+	}
+
+	drop_index(tab_name, col_names, context); 
 }

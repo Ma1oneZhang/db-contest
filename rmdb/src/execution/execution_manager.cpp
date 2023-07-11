@@ -19,6 +19,7 @@ See the Mulan PSL v2 for more details. */
 #include "executor_seq_scan.h"
 #include "executor_update.h"
 #include "index/ix.h"
+#include "optimizer/plan.h"
 #include "record_printer.h"
 
 const char *help_info = "Supported SQL syntax:\n"
@@ -72,7 +73,7 @@ void QlManager::run_mutli_query(std::shared_ptr<Plan> plan, Context *context) {
 	}
 }
 
-// 执行help; show tables; desc table; begin; commit; abort;语句
+// 执行help; show tables; desc table; show index; begin; commit; abort;语句
 void QlManager::run_cmd_utility(std::shared_ptr<Plan> plan, txn_id_t *txn_id, Context *context) {
 	if (auto x = std::dynamic_pointer_cast<OtherPlan>(plan)) {
 		switch (x->tag) {
@@ -87,6 +88,10 @@ void QlManager::run_cmd_utility(std::shared_ptr<Plan> plan, txn_id_t *txn_id, Co
 			}
 			case T_DescTable: {
 				sm_manager_->desc_table(x->tab_name_, context);
+				break;
+			}
+			case T_ShowIndex: {
+				sm_manager_->show_index(x->tab_name_, context); 
 				break;
 			}
 			case T_Transaction_begin: {
