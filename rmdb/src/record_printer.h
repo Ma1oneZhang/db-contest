@@ -11,6 +11,7 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <cassert>
+#include <cstddef>
 #include <iostream>
 #include <iomanip>
 #include <string>
@@ -72,6 +73,30 @@ public:
         if(context->ellipsis_ == false && *context->offset_ + RECORD_COUNT_LENGTH + str.length() < BUFFER_LENGTH) {
             memcpy(context->data_send_ + *(context->offset_), str.c_str(), str.length());
             *(context->offset_) = *(context->offset_) + str.length();
+        }
+    }
+
+    /**
+    * @description: 打印给的字符串； 
+    * @param {string&} rec_str 要打印的字符串, 不自动输出换行符'\n'
+    * @param {size_t&} STR_WIDTH 要打印的字符串的最大显示长度
+    * @param {Context*} context
+    */
+    void print_string(const std::string &rec_str, const size_t &STR_WIDTH, Context *context) const {
+        
+        auto str = rec_str; 
+        if (str.size() > STR_WIDTH) {
+            str = str.substr(0, STR_WIDTH - 3) + "...";
+        }
+
+        std::stringstream ss;
+        ss << str;
+        if(context->ellipsis_ == false && *context->offset_ + RECORD_COUNT_LENGTH + ss.str().length() < BUFFER_LENGTH) {
+            memcpy(context->data_send_ + *(context->offset_), ss.str().c_str(), ss.str().length());
+            *(context->offset_) = *(context->offset_) + ss.str().length();
+        }
+        else {
+            context->ellipsis_ = true;
         }
     }
 

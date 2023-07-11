@@ -283,7 +283,7 @@ void SmManager::show_index(const std::string& tab_name, Context* context) {
 		}
 		str = str + ")" + " |\n"; 
 
-		printer.print_record({str}, context);
+		printer.print_string(str, 40, context);
 		outfile << str; 
 	}
 
