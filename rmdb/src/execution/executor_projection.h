@@ -13,39 +13,64 @@ See the Mulan PSL v2 for more details. */
 #include "execution_manager.h"
 #include "executor_abstract.h"
 #include "index/ix.h"
+#include "record/rm_defs.h"
 #include "system/sm.h"
+#include <cstring>
+#include <memory>
 
 class ProjectionExecutor : public AbstractExecutor {
-   private:
-    std::unique_ptr<AbstractExecutor> prev_;        // 投影节点的儿子节点
-    std::vector<ColMeta> cols_;                     // 需要投影的字段
-    size_t len_;                                    // 字段总长度
-    std::vector<size_t> sel_idxs_;                  
+private:
+	std::unique_ptr<AbstractExecutor> prev_;// 投影节点的儿子节点
+	std::vector<ColMeta> cols_;             // 需要投影的字段
+	size_t len_;                            // 字段总长度
+	std::vector<size_t> sel_idxs_;
 
-   public:
-    ProjectionExecutor(std::unique_ptr<AbstractExecutor> prev, const std::vector<TabCol> &sel_cols) {
-        prev_ = std::move(prev);
+public:
+	ProjectionExecutor(std::unique_ptr<AbstractExecutor> prev, const std::vector<TabCol> &sel_cols) {
+		prev_ = std::move(prev);
+		size_t curr_offset = 0;
+		auto &prev_cols = prev_->cols();
 
-        size_t curr_offset = 0;
-        auto &prev_cols = prev_->cols();
-        for (auto &sel_col : sel_cols) {
-            auto pos = get_col(prev_cols, sel_col);
-            sel_idxs_.push_back(pos - prev_cols.begin());
-            auto col = *pos;
-            col.offset = curr_offset;
-            curr_offset += col.len;
-            cols_.push_back(col);
-        }
-        len_ = curr_offset;
-    }
+		for (auto &sel_col: sel_cols) {
+			auto pos = get_col(prev_cols, sel_col);
+			sel_idxs_.push_back(pos - prev_cols.begin());
+			auto col = *pos;
+			col.offset = curr_offset;
+			curr_offset += col.len;
+			cols_.push_back(col);
+		}
+		len_ = curr_offset;
+	}
 
-    void beginTuple() override {}
+	const std::vector<ColMeta> &cols() override {
+		return cols_;
+	}
 
-    void nextTuple() override {}
+	void beginTuple() override {
+		prev_->beginTuple();
+	}
 
-    std::unique_ptr<RmRecord> Next() override {
-        return nullptr;
-    }
+	void nextTuple() override {
+		prev_->nextTuple();
+	}
 
-    Rid &rid() override { return _abstract_rid; }
+	bool is_end() const override {
+		return prev_->is_end();
+	}
+	std::unique_ptr<RmRecord> Next() override {
+		assert(!is_end());
+		auto prev_rec = prev_->Next();
+		auto &prev_cols = prev_->cols();
+		auto &project_cols = cols_;
+		auto project_rec = std::make_unique<RmRecord>(len_);
+		for (size_t i = 0; i < project_cols.size(); i++) {
+			auto prev_idx = sel_idxs_[i];
+			auto &prev_col = prev_cols[prev_idx];
+			auto &proj_col = project_cols[i];
+			memcpy(project_rec->data + proj_col.offset, prev_rec->data + prev_col.offset, prev_col.len);
+		}
+		return project_rec;
+	}
+
+	Rid &rid() override { return _abstract_rid; }
 };

@@ -6,5 +6,5 @@ set(SOURCES
 )
 add_library(storage STATIC ${SOURCES})
 
-add_executable(storage_test buffer_pool_manager_test.cpp)
-target_link_libraries(storage_test storage gtest_main)
+add_executable(storage_test_fake buffer_pool_manager_test.cpp)
+target_link_libraries(storage_test_fake storage gtest_main)

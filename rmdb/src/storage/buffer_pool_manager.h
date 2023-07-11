@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 #include <atomic>
 #include <cstddef>
 #include <fcntl.h>
+#include <mutex>
 #include <unistd.h>
 
 #include <cassert>
@@ -73,6 +74,7 @@ public:
 
 	void flush_all_pages(int fd);
 
+	void delete_all_pages(int fd);
 private:
 	bool find_victim_page(frame_id_t *frame_id);
 

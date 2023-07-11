@@ -49,6 +49,7 @@ void BufferPoolManager::update_page(Page *page, PageId new_page_id, frame_id_t n
 		page_table_.Insert(new_page_id, new_frame_id);
 	}
 	// 3 重置page的data，更新page id
+	page->reset_memory();
 	page->set_page_id(new_page_id);
 }
 
@@ -188,7 +189,6 @@ bool BufferPoolManager::delete_page(const PageId &page_id) {
 	if (page->pin_count_ > 0) {
 		return false;
 	}
-	disk_manager_->deallocate_page(page_id.page_no);
 	update_page(page, page_id, -1);
 	free_list_.emplace_back(frame);
 	return true;
@@ -201,12 +201,34 @@ bool BufferPoolManager::delete_page(const PageId &page_id) {
 void BufferPoolManager::flush_all_pages(int fd) {
 	std::scoped_lock lock{latch_};
 	for (size_t i = 0; i < pool_size_; i++) {
-		{
-			if (fd == pages_[i].get_page_id().fd) {
-				Page *page = &pages_[i];
-				disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
-				page->is_dirty_ = false;
-			}
+		if (fd == pages_[i].get_page_id().fd && INVALID_PAGE_ID != pages_[i].get_page_id().page_no) {
+			Page *page = &pages_[i];
+			disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+			page->is_dirty_ = false;
+		}
+	}
+}
+
+/**
+ * @description: 将buffer_pool中的所有与该FD相关页删除 shitty code
+ * @param {int} fd 文件句柄
+ */
+void BufferPoolManager::delete_all_pages(int fd) {
+	std::scoped_lock lock{latch_};
+	for (size_t i = 0; i < pool_size_; i++) {
+		if (fd == pages_[i].get_page_id().fd && INVALID_PAGE_ID != pages_[i].get_page_id().page_no) {
+			Page *page = &pages_[i];
+			// write back
+			disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+			// remove from page_table
+			page_table_.Erase(page->get_page_id());
+			// reset
+			page->is_dirty_ = false;
+			page->id_ = {-1, -1};
+			page->pin_count_ = 0;
+			page->reset_memory();
+			// add to free list
+			replacer_->unpin(i);
 		}
 	}
 }

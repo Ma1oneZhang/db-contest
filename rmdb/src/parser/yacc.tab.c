@@ -1679,7 +1679,7 @@ yyreduce:
   case 24:
 #line 159 "yacc.y"
     {
-        (yyval.sv_type_len) = std::make_shared<TypeLen>(SV_TYPE_FLOAT, sizeof(float));
+        (yyval.sv_type_len) = std::make_shared<TypeLen>(SV_TYPE_FLOAT, sizeof(double));
     }
 #line 1685 "yacc.tab.c"
     break;

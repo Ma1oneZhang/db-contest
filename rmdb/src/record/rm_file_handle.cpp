@@ -10,7 +10,9 @@ See the Mulan PSL v2 for more details. */
 
 #include "rm_file_handle.h"
 #include "record/bitmap.h"
+#include "record/rm_defs.h"
 #include <cstring>
+#include <memory>
 /**
  * @description: 获取当前表中记录号为rid的记录
  * @param {Rid&} rid 记录号，指定记录的位置
@@ -22,7 +24,9 @@ std::unique_ptr<RmRecord> RmFileHandle::get_record(const Rid &rid, Context *cont
 	// 1. 获取指定记录所在的page handle
 	// 2. 初始化一个指向RmRecord的指针（赋值其内部的data和size）
 	RmPageHandle page_handle = fetch_page_handle(rid.page_no);
-	return std::make_unique<RmRecord>(file_hdr_.record_size, page_handle.get_slot(rid.slot_no));
+	auto res = std::make_unique<RmRecord>(file_hdr_.record_size, page_handle.get_slot(rid.slot_no));
+	buffer_pool_manager_->unpin_page({fd_, rid.page_no}, true);
+	return res;
 }
 
 /**
@@ -39,18 +43,19 @@ Rid RmFileHandle::insert_record(char *buf, Context *context) {
 	// 4. 更新page_handle.page_hdr中的数据结构
 	// 注意考虑插入一条记录后页面已满的情况，需要更新file_hdr_.first_free_page_no
 	RmPageHandle page_handle{};
-	if (file_hdr_.first_free_page_no == -1) {
+	if (file_hdr_.first_free_page_no == RM_NO_PAGE) {
 		page_handle = create_new_page_handle();
 	} else {
 		page_handle = fetch_page_handle(file_hdr_.first_free_page_no);
 	}
 	auto free = Bitmap::next_bit(false, page_handle.bitmap, page_handle.file_hdr->num_records_per_page, -1);
 	auto rid = Rid{file_hdr_.first_free_page_no, free};
+
 	Bitmap::set(page_handle.bitmap, free);
 	update_record(rid, buf, context);
 	page_handle.page_hdr->num_records++;
 	if (page_handle.page_hdr->num_records == page_handle.file_hdr->num_records_per_page) {
-		create_new_page_handle();
+		file_hdr_.first_free_page_no = page_handle.page_hdr->next_free_page_no;
 	}
 	buffer_pool_manager_->unpin_page({fd_, rid.page_no}, true);
 	return rid;
@@ -63,9 +68,7 @@ Rid RmFileHandle::insert_record(char *buf, Context *context) {
  */
 void RmFileHandle::insert_record(const Rid &rid, char *buf) {
 	RmPageHandle page_handle = fetch_page_handle(rid.page_no);
-	RmRecord record = {page_handle.file_hdr->record_size,
-										 page_handle.get_slot(rid.slot_no)};
-	record.SetData(buf);
+	memcpy(page_handle.get_slot(rid.slot_no), buf, page_handle.file_hdr->record_size);
 	Bitmap::set(page_handle.bitmap, rid.slot_no);
 	buffer_pool_manager_->unpin_page({fd_, rid.page_no}, true);
 }
@@ -142,12 +145,16 @@ RmPageHandle RmFileHandle::create_new_page_handle() {
 	if (page == nullptr) {
 		throw std::logic_error("All page has been pinned");
 	}
-	file_hdr_.first_free_page_no = page_id.page_no;
-	file_hdr_.num_pages++;
+
 	auto res = RmPageHandle(&file_hdr_, page);
+
 	res.page_hdr->num_records = 0;
-	res.page_hdr->next_free_page_no = -1;
+	res.page_hdr->next_free_page_no = RM_NO_PAGE;
+
 	Bitmap::init(res.bitmap, res.file_hdr->bitmap_size);
+
+	file_hdr_.first_free_page_no = page->get_page_id().page_no;
+	file_hdr_.num_pages++;
 	return res;
 }
 
@@ -163,10 +170,10 @@ RmPageHandle RmFileHandle::create_page_handle() {
 	//     1.1 没有空闲页：使用缓冲池来创建一个新page；可直接调用create_new_page_handle()
 	//     1.2 有空闲页：直接获取第一个空闲页
 	// 2. 生成page handle并返回给上层
-	if (file_hdr_.first_free_page_no == -1) {
+	if (file_hdr_.first_free_page_no == RM_NO_PAGE) {
 		return create_new_page_handle();
 	}
-	return RmPageHandle(&file_hdr_, buffer_pool_manager_->fetch_page({fd_, file_hdr_.first_free_page_no}));
+	return fetch_page_handle(file_hdr_.first_free_page_no);
 }
 
 /**

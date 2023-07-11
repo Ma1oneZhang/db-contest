@@ -39,7 +39,7 @@ identifier {alpha}(_|{alpha}|{digit})*
 value_int {sign}?{digit}+
 value_float {sign}?{digit}+\.({digit}+)?
 value_string '[^']*'
-single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."
+single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
 
 %x STATE_COMMENT
 
@@ -55,7 +55,7 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."
 {white_space} { /* ignore white space */ }
 {new_line} { /* ignore new line */ }
     /* keywords */
-"SHOW" { return SHOW; }
+"SHOW"  { return SHOW; }
 "BEGIN" { return TXN_BEGIN; }
 "COMMIT" { return TXN_COMMIT; }
 "ABORT" { return TXN_ABORT; }
@@ -77,6 +77,7 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."
 "INT" { return INT; }
 "CHAR" { return CHAR; }
 "FLOAT" { return FLOAT; }
+"BIGINT" {return BIGINT; }
 "INDEX" { return INDEX; }
 "AND" { return AND; }
 "JOIN" {return JOIN;}
@@ -85,6 +86,7 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."
 "ORDER" { return ORDER; }
 "BY" {  return BY;  }
 "ASC" { return ASC; }
+"DATETIME" { return DATETIME; }
     /* operators */
 ">=" { return GEQ; }
 "<=" { return LEQ; }
@@ -97,8 +99,18 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."
 }
     /* literals */
 {value_int} {
-    yylval->sv_int = atoi(yytext);
-    return VALUE_INT;
+    auto number = std::string(yytext);
+    try{
+        yylval->sv_int = stoi(number);
+        return VALUE_INT;
+    }catch (std::out_of_range const& ex){
+        try{
+            yylval->sv_bigint = stoll(number);
+            return VALUE_BIGINT;
+        }catch (std::out_of_range const& ex){
+            return 0;
+        }
+    }
 }
 {value_float} {
     yylval->sv_float = atof(yytext);

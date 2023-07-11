@@ -8,8 +8,10 @@
       "type": "lldb",
       "request": "launch",
       "name": "Debug",
-      "program": "${workspaceFolder}/build/bin/storage_test",
-      "args": [],
+      "program": "${workspaceFolder}/build/bin/rmdb",
+      "args": [
+        "test"
+      ],
       "cwd": "${workspaceFolder}/build",
       "preLaunchTask": "Build"
     }
