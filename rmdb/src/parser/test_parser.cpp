@@ -31,6 +31,7 @@ int main() {
 		"select x.a, y.b from x, y where x.a = y.b and c = d;",
 		"select x.a, y.b from x join y where x.a = y.b and c = d;",
 		"update grade set score = score + 5 where name = 'Calculus';",
+		"show index from warehouse;", 
 		"insert into a values(123123123);",
 		"insert into a values(123123123123123123);",
 		"CREATE TABLE t(bid bigint,sid int);",
