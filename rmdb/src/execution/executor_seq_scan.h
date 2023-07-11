@@ -61,10 +61,14 @@ private:
 			int cmp;
 			if (col->type == TYPE_INT) {
 				// handle int type
-				if (col->type != rhs_type) {
-					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+				if (rhs_type == TYPE_BIGINT) {
+					cmp = ix_compare((int *) lhs, (int64_t *) rhs, rhs_type, col->len);
+				} else {
+					if (col->type != rhs_type) {
+						throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+					}
+					cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
 				}
-				cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
 			} else if (col->type == TYPE_FLOAT) {
 				// handle float type
 				if (rhs_type == TYPE_INT) {
