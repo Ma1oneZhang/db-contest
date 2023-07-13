@@ -63,6 +63,16 @@ namespace ast {
 			return m.at(op);
 		}
 
+		static std::string aggregate2str(AggregateDir agg) {
+			static std::map<AggregateDir, std::string> m{
+				{Aggregate_COUNT, "COUNT"},
+				{Aggregate_MAX, "MAX"},
+				{Aggregate_MIN, "MIN"},
+				{Aggregate_SUM, "SUM"},
+			};
+			return m.at(agg); 
+		}
+
 		template<typename T>
 		static void print_node_list(std::vector<T> nodes, int offset) {
 			std::cout << offset2string(offset);
@@ -137,6 +147,11 @@ namespace ast {
 				}
 				print_val(x->col_name, offset);
 				print_node(x->val, offset);
+			} else if (auto x = std::dynamic_pointer_cast<Aggregate>(node)) {
+				std::string str = aggregate2str(x->aggregate_dir) 
+							+ '(' + (x->cols.size() == 0 ? "*" : x->cols.front()->col_name) + ')' ; 
+				if (x->col_alias) str = str + " AS " + x->col_alias->col_name; 
+				print_val(str, 0);
 			} else if (auto x = std::dynamic_pointer_cast<BinaryExpr>(node)) {
 				std::cout << "BINARY_EXPR\n";
 				print_node(x->lhs, offset);
@@ -157,9 +172,20 @@ namespace ast {
 				print_node_list(x->conds, offset);
 			} else if (auto x = std::dynamic_pointer_cast<SelectStmt>(node)) {
 				std::cout << "SELECT\n";
-				print_node_list(x->cols, offset);
-				print_val_list(x->tabs, offset);
-				print_node_list(x->conds, offset);
+				if (!x->has_aggregate) {
+					if (x->cols.size()) {
+						print_node_list(x->cols, offset);
+					} else {
+						print_val("LIST", offset); 
+						print_val("*", offset + 2); 
+					}
+					print_val_list(x->tabs, offset);
+					if (x->conds.size() > 0) print_node_list(x->conds, offset);
+				} else {
+					print_node_list(x->aggregates, offset);
+					print_val_list(x->tabs, offset);
+					if (x->conds.size() > 0) print_node_list(x->conds, offset);
+				}
 			} else if (auto x = std::dynamic_pointer_cast<TxnBegin>(node)) {
 				std::cout << "BEGIN\n";
 			} else if (auto x = std::dynamic_pointer_cast<TxnCommit>(node)) {

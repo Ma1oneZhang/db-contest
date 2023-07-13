@@ -13,10 +13,12 @@ See the Mulan PSL v2 for more details. */
 #include <algorithm>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include "errors.h"
+#include "parser/ast.h"
 #include "sm_defs.h"
 
 /* 字段元数据 */
@@ -71,12 +73,19 @@ struct TabMeta {
 	std::string name;              // 表名称
 	std::vector<ColMeta> cols;     // 表包含的字段
 	std::vector<IndexMeta> indexes;// 表上建立的索引
+	std::vector<std::shared_ptr<ast::Aggregate>> aggregates; //该表中需要查询的聚合函数
 
 	TabMeta() {}
 
 	TabMeta(const TabMeta &other) {
 		name = other.name;
 		for (auto col: other.cols) cols.push_back(col);
+	}
+
+
+	/* 获取要查询的聚合函数*/
+	std::vector<std::shared_ptr<ast::Aggregate>>& get_aggregates() {
+		return aggregates; 
 	}
 
 	/* 判断当前表中是否存在名为col_name的字段 */

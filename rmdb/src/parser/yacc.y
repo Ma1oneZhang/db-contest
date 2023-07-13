@@ -22,7 +22,8 @@ using namespace ast;
 
 // keywords
 %token SHOW TABLES CREATE TABLE DROP DESC INSERT INTO VALUES DELETE FROM ASC ORDER BY
-WHERE UPDATE SET SELECT INT CHAR FLOAT BIGINT INDEX DATETIME AND JOIN EXIT HELP TXN_BEGIN TXN_COMMIT TXN_ABORT TXN_ROLLBACK ORDER_BY
+WHERE UPDATE SET SELECT INT CHAR FLOAT INDEX AND JOIN EXIT HELP TXN_BEGIN TXN_COMMIT TXN_ABORT TXN_ROLLBACK ORDER_BY
+BIGINT DATETIME COUNT MAX MIN SUM AS
 // non-keywords
 %token LEQ NEQ GEQ T_EOF
 
@@ -43,7 +44,7 @@ WHERE UPDATE SET SELECT INT CHAR FLOAT BIGINT INDEX DATETIME AND JOIN EXIT HELP 
 %type <sv_vals> valueList
 %type <sv_str> tbName colName
 %type <sv_strs> tableList colNameList
-%type <sv_col> col
+%type <sv_col> col alias_aggregate
 %type <sv_cols> colList selector
 %type <sv_set_clause> setClause
 %type <sv_set_clauses> setClauses
@@ -51,6 +52,10 @@ WHERE UPDATE SET SELECT INT CHAR FLOAT BIGINT INDEX DATETIME AND JOIN EXIT HELP 
 %type <sv_conds> whereClause optWhereClause
 %type <sv_orderby>  order_clause opt_order_clause
 %type <sv_orderby_dir> opt_asc_desc
+%type <sv_aggregate_dir> opt_aggregate
+%type <sv_aggregate> aggregate
+%type <sv_aggregates> aggregates
+
 
 %%
 start:
@@ -149,9 +154,9 @@ dml:
     {
         $$ = std::make_shared<UpdateStmt>($2, $4, $5);
     }
-    |   SELECT selector FROM tableList optWhereClause opt_order_clause
+    |   SELECT aggregates selector FROM tableList optWhereClause opt_order_clause
     {
-        $$ = std::make_shared<SelectStmt>($2, $4, $5, $6);
+        $$ = std::make_shared<SelectStmt>($3, $5, $6, $7, $2);
     }
     ;
 
@@ -357,12 +362,68 @@ setClause:
     }
     ;
 
+aggregates: 
+    aggregate
+    {
+        $$ = std::vector<std::shared_ptr<Aggregate>>{$1}; 
+    }
+    |   aggregates ',' aggregate
+    {
+        $$.push_back($3); 
+    }
+    |   /* epsilon */ { /* ignore*/ }
+    ;
+
+aggregate:
+        opt_aggregate '(' selector ')' alias_aggregate
+    {
+        $$ = std::make_shared<Aggregate>($3, $1, $5);
+    }
+    |   /* epsilon */ { /* ignore*/ }
+    ; 
+
+opt_aggregate:
+        COUNT
+    {
+        $$ = Aggregate_COUNT;
+    }
+    |   MAX
+    {
+        $$ = Aggregate_MAX;
+    }
+    |   MIN
+    {
+        $$ = Aggregate_MIN;
+    }
+    |   SUM
+    {
+        $$ = Aggregate_SUM; 
+    }
+    ;
+
+
+alias_aggregate:
+        AS col
+    {
+        $$ = $2;
+    }
+    |   
+    {
+        $$ = {};  /** 没有别名, 返回一个空的回去*/
+    }
+    ;
+
+
 selector:
         '*'
     {
         $$ = {};
     }
     |   colList
+    {
+        $$ = $1;
+    }
+    |   /* epsilon */ { /* ignore*/ }
     ;
 
 tableList:
@@ -389,16 +450,25 @@ opt_order_clause:
     ;
 
 order_clause:
-      col  opt_asc_desc 
+        col  opt_asc_desc 
     { 
         $$ = std::make_shared<OrderBy>($1, $2);
     }
     ;   
 
 opt_asc_desc:
-    ASC          { $$ = OrderBy_ASC;     }
-    |  DESC      { $$ = OrderBy_DESC;    }
-    |       { $$ = OrderBy_DEFAULT; }
+        ASC          
+    { 
+        $$ = OrderBy_ASC;     
+    }
+    |   DESC      
+    { 
+        $$ = OrderBy_DESC;    
+    }
+    |       
+    { 
+        $$ = OrderBy_DEFAULT; 
+    }
     ;    
 
 tbName: IDENTIFIER;
