@@ -164,3 +164,8 @@ class DatetimeError : public RMDBError {
    public:
     DatetimeError(const std::string &msg) : RMDBError(msg) {}
 };
+
+class AggregateError : public RMDBError {
+   public:
+    AggregateError(const std::string &msg) : RMDBError(msg) {}
+};

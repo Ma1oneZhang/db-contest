@@ -34,8 +34,8 @@
 /* Undocumented macros, especially those whose name start with YY_,
    are private implementation details.  Do not rely on them.  */
 
-#ifndef YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
-# define YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
+#ifndef YY_YY_HOME_HL_SQL_DB_CONTEST_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
+# define YY_YY_HOME_HL_SQL_DB_CONTEST_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -70,27 +70,32 @@ extern int yydebug;
     INT = 276,
     CHAR = 277,
     FLOAT = 278,
-    BIGINT = 279,
-    INDEX = 280,
-    DATETIME = 281,
-    AND = 282,
-    JOIN = 283,
-    EXIT = 284,
-    HELP = 285,
-    TXN_BEGIN = 286,
-    TXN_COMMIT = 287,
-    TXN_ABORT = 288,
-    TXN_ROLLBACK = 289,
-    ORDER_BY = 290,
-    LEQ = 291,
-    NEQ = 292,
-    GEQ = 293,
-    T_EOF = 294,
-    IDENTIFIER = 295,
-    VALUE_STRING = 296,
-    VALUE_INT = 297,
-    VALUE_FLOAT = 298,
-    VALUE_BIGINT = 299
+    INDEX = 279,
+    AND = 280,
+    JOIN = 281,
+    EXIT = 282,
+    HELP = 283,
+    TXN_BEGIN = 284,
+    TXN_COMMIT = 285,
+    TXN_ABORT = 286,
+    TXN_ROLLBACK = 287,
+    ORDER_BY = 288,
+    BIGINT = 289,
+    DATETIME = 290,
+    COUNT = 291,
+    MAX = 292,
+    MIN = 293,
+    SUM = 294,
+    AS = 295,
+    LEQ = 296,
+    NEQ = 297,
+    GEQ = 298,
+    T_EOF = 299,
+    IDENTIFIER = 300,
+    VALUE_STRING = 301,
+    VALUE_INT = 302,
+    VALUE_FLOAT = 303,
+    VALUE_BIGINT = 304
   };
 #endif
 
@@ -114,4 +119,4 @@ struct YYLTYPE
 
 int yyparse (void);
 
-#endif /* !YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED  */
+#endif /* !YY_YY_HOME_HL_SQL_DB_CONTEST_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED  */

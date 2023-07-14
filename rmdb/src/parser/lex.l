@@ -87,6 +87,12 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
 "BY" {  return BY;  }
 "ASC" { return ASC; }
 "DATETIME" { return DATETIME; }
+    /* polymerization*/
+"SUM" { return SUM; }
+"COUNT" { return COUNT; }
+"MAX" { return MAX; }
+"MIN" { return MIN; }
+"AS"  { return AS; }
     /* operators */
 ">=" { return GEQ; }
 "<=" { return LEQ; }
