@@ -66,7 +66,7 @@
 
 
 /* First part of user prologue.  */
-#line 1 "yacc.y"
+#line 1 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
 
 #include "ast.h"
 #include "yacc.tab.h"
@@ -81,7 +81,7 @@ void yyerror(YYLTYPE *locp, const char* s) {
 
 using namespace ast;
 
-#line 85 "yacc.tab.cpp"
+#line 85 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -114,8 +114,8 @@ using namespace ast;
 
 /* Use api.header.include to #include this header
    instead of duplicating it here.  */
-#ifndef YY_YY_YACC_TAB_HPP_INCLUDED
-# define YY_YY_YACC_TAB_HPP_INCLUDED
+#ifndef YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
+# define YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -199,7 +199,7 @@ struct YYLTYPE
 
 int yyparse (void);
 
-#endif /* !YY_YY_YACC_TAB_HPP_INCLUDED  */
+#endif /* !YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED  */
 
 
 
@@ -1577,6 +1577,7 @@ yyreduce:
     {
   case 2:
 #line 63 "yacc.y"
+
     {
         parse_tree = (yyvsp[-1].sv_node);
         YYACCEPT;
@@ -1586,6 +1587,7 @@ yyreduce:
 
   case 3:
 #line 68 "yacc.y"
+
     {
         parse_tree = std::make_shared<Help>();
         YYACCEPT;
@@ -1599,6 +1601,7 @@ yyreduce:
         parse_tree = nullptr;
         YYACCEPT;
     }
+
 #line 1603 "yacc.tab.cpp"
     break;
 
@@ -2465,3 +2468,4 @@ yyreturn:
   return yyresult;
 }
 #line 477 "yacc.y"
+

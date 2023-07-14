@@ -232,3 +232,22 @@ void BufferPoolManager::delete_all_pages(int fd) {
 		}
 	}
 }
+
+/**
+ * @description: 查看所有page是否unpin(DEBUG ONLY)
+ * @return {bool}
+ */
+bool BufferPoolManager::check_unpin() {
+	std::scoped_lock lock{latch_};
+	for (size_t i = 2; i < pool_size_; i++) {
+		if (pages_[i].pin_count_ != 0) {
+			if (pages_[i].pin_count_ < 0) {
+				LOG_INFO("%zu, DOUBLE UNPIN", i)
+			} else {
+				LOG_INFO("%zu, THERE IS PINING PAGE", i);
+			}
+			return false;
+		}
+	}
+	return true;
+}

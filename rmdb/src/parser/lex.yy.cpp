@@ -1,6 +1,6 @@
-#line 2 "lex.yy.cpp"
+#line 2 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/lex.yy.cpp"
 
-#line 4 "lex.yy.cpp"
+#line 4 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/lex.yy.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -645,6 +645,7 @@ char *yytext;
 
 #line 647 "lex.yy.cpp"
 
+
 #define INITIAL 0
 #define STATE_COMMENT 1
 
@@ -882,6 +883,7 @@ YY_DECL
 #line 48 "lex.l"
     /* block comment */
 #line 885 "lex.yy.cpp"
+
 
 	while ( /*CONSTCOND*/1 )		/* loops until end-of-file is reached */
 		{
