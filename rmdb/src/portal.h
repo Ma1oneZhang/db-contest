@@ -157,7 +157,12 @@ public:
 			return join;
 		} else if (auto x = std::dynamic_pointer_cast<SortPlan>(plan)) {
 			return std::make_unique<SortExecutor>(convert_plan_executor(x->subplan_, context),
-																						x->sel_col_, x->is_desc_);
+																						x->fh,
+																						x->cols,
+																						x->order_cols,
+																						x->order_idx, 
+																						x->order_bys,
+																						x->limit);
 		}
 		LOG_INFO("nullptr")
 		return nullptr;

@@ -26,9 +26,9 @@ See the Mulan PSL v2 for more details. */
 
 class SeqScanExecutor : public AbstractExecutor {
 private:
+	RmFileHandle *fh_;                // 表的数据文件句柄
 	std::string tab_name_;            // 表的名称
 	std::vector<Condition> conds_;    // scan的条件
-	RmFileHandle *fh_;                // 表的数据文件句柄
 	std::vector<ColMeta> cols_;       // scan后生成的记录的字段
 	size_t len_;                      // scan后生成的每条记录的长度
 	std::vector<Condition> fed_conds_;// 同conds_，两个字段相同
@@ -173,7 +173,7 @@ public:
 	void nextTuple() override {
 		for (scan_->next(); !scan_->is_end(); scan_->next()) {
 			rid_ = scan_->rid();
-			if (checkCondition(fh_->get_record(rid_, nullptr))) {
+			if (checkCondition(fh_->get_record(rid_, nullptr))) { //如果当前按记录不满足where条件, 跳过当前记录
 				break;
 			}
 		}
