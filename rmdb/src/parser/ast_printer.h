@@ -73,6 +73,15 @@ namespace ast {
 			return m.at(agg); 
 		}
 
+		static std::string orderByDir2str(OrderByDir agg) {
+			static std::map<OrderByDir, std::string> m{
+				{OrderBy_DEFAULT, "DEFAULT"},
+				{OrderBy_ASC, "ASC"},
+				{OrderBy_DESC, "DESC"},
+			};
+			return m.at(agg); 
+		}
+
 		template<typename T>
 		static void print_node_list(std::vector<T> nodes, int offset) {
 			std::cout << offset2string(offset);
@@ -121,8 +130,7 @@ namespace ast {
 				print_node(x->type_len, offset);
 			} else if (auto x = std::dynamic_pointer_cast<Col>(node)) {
 				std::cout << "COL\n";
-				print_val(x->tab_name, offset);
-				print_val(x->col_name, offset);
+				print_val(x->tab_name + '.' + x->col_name, offset);
 			} else if (auto x = std::dynamic_pointer_cast<TypeLen>(node)) {
 				std::cout << "TYPE_LEN\n";
 				print_val(type2str(x->type), offset);
@@ -139,6 +147,10 @@ namespace ast {
 			} else if (auto x = std::dynamic_pointer_cast<BigintLit>(node)) {
 				std::cout << "BIGINT_LIT";
 				print_val(x->val, offset);
+			} else if (auto x = std::dynamic_pointer_cast<OrderBy>(node)) {
+				std::cout << "ORDER BY\n";
+				print_node_list(x->cols, offset);
+				print_val(orderByDir2str(x->orderby_dir), offset); 
 			} else if (auto x = std::dynamic_pointer_cast<SetClause>(node)) {
 				if (x->is_self) {
 					std::cout << "self operation SET_CLAUSE\n";
@@ -172,7 +184,11 @@ namespace ast {
 				print_node_list(x->conds, offset);
 			} else if (auto x = std::dynamic_pointer_cast<SelectStmt>(node)) {
 				std::cout << "SELECT\n";
-				if (!x->has_aggregate) {
+				if (x->has_aggregate) {
+					print_node_list(x->aggregates, offset);
+					print_val_list(x->tabs, offset);
+					if (x->conds.size() > 0) print_node_list(x->conds, offset);
+				} else { //not aggregate
 					if (x->cols.size()) {
 						print_node_list(x->cols, offset);
 					} else {
@@ -181,10 +197,8 @@ namespace ast {
 					}
 					print_val_list(x->tabs, offset);
 					if (x->conds.size() > 0) print_node_list(x->conds, offset);
-				} else {
-					print_node_list(x->aggregates, offset);
-					print_val_list(x->tabs, offset);
-					if (x->conds.size() > 0) print_node_list(x->conds, offset);
+					print_node_list(x->orders, offset);
+
 				}
 			} else if (auto x = std::dynamic_pointer_cast<TxnBegin>(node)) {
 				std::cout << "BEGIN\n";

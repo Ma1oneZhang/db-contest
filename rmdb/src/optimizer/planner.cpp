@@ -257,12 +257,12 @@ std::shared_ptr<Plan> Planner::generate_sort_plan(std::shared_ptr<Query> query, 
 		all_cols.insert(all_cols.end(), sel_tab_cols.begin(), sel_tab_cols.end());
 	}
 	TabCol sel_col;
-	for (auto &col: all_cols) {
-		if (col.name.compare(x->order->cols->col_name) == 0)
-			sel_col = {.tab_name = col.tab_name, .col_name = col.name};
-	}
+	// for (auto &col: all_cols) {
+	// 	if (col.name.compare(x->order->cols->col_name) == 0)
+	// 		sel_col = {.tab_name = col.tab_name, .col_name = col.name};
+	// }
 	return std::make_shared<SortPlan>(T_Sort, std::move(plan), sel_col,
-																		x->order->orderby_dir == ast::OrderBy_DESC);
+																		x->orders.front()->orderby_dir == ast::OrderBy_DESC);
 }
 
 
