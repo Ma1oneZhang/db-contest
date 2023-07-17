@@ -11,8 +11,10 @@ See the Mulan PSL v2 for more details. */
 #include "ix_index_handle.h"
 
 #include "common/config.h"
+#include "defs.h"
 #include "ix_scan.h"
 #include "storage/page.h"
+#include <cassert>
 
 /**
  * @brief 在当前node中查找第一个>=target的key_idx
@@ -24,7 +26,7 @@ int IxNodeHandle::lower_bound(const char *target) const {
 	// Todo:
 	// 查找当前节点中第一个大于等于target的key，并返回key的位置给上层
 	// 提示: 可以采用多种查找方式，如顺序遍历、二分查找等；使用ix_compare()函数进行比较
-	int l = 0, r = page_hdr->num_key;
+	int l = 0, r = get_size();
 	while (l < r) {
 		int mid = (l + r) / 2;
 		if (ix_compare(get_key(mid), target, file_hdr->col_types_, file_hdr->col_lens_) >= 0) {
@@ -46,7 +48,7 @@ int IxNodeHandle::upper_bound(const char *target) const {
 	// Todo:
 	// 查找当前节点中第一个大于target的key，并返回key的位置给上层
 	// 提示: 可以采用多种查找方式：顺序遍历、二分查找等；使用ix_compare()函数进行比较
-	size_t l = 0, r = page_hdr->num_key;
+	size_t l = 0, r = get_size();
 	while (l < r) {
 		size_t mid = (l + r) / 2;
 		if (ix_compare(get_key(mid), target, file_hdr->col_types_, file_hdr->col_lens_) > 0) {
@@ -140,16 +142,22 @@ int IxNodeHandle::insert(const char *key, const Rid &value) {
 	// 3. 如果key不重复则插入键值对
 	// 4. 返回完成插入操作之后的键值对数量
 	auto pos = lower_bound(key);
-	page_hdr->num_key++;
 	// data repeat
-	if (ix_compare(key, keys + pos * file_hdr->col_tot_len_, file_hdr->col_types_, file_hdr->col_lens_) == 0)
-		return 0;
+	if (ix_compare(key, get_key(pos), file_hdr->col_types_, file_hdr->col_lens_) == 0) {
+		auto empty = Rid();
+		empty.page_no = 0, empty.slot_no = 0;
+		if (!(*get_rid(pos) == empty)) {
+			return 0;
+		}
+	}
 	// move col [pos, num_key) -> [pos + 1, num_key + 1)
-	std::move(keys + pos * file_hdr->col_tot_len_, keys + (page_hdr->num_key) * file_hdr->col_tot_len_, keys + (pos + 1) * file_hdr->col_tot_len_);
-	std::move(rids + pos, rids + (page_hdr->num_key), rids + (pos + 1));
+	std::move(get_key(pos), get_key(get_size()), get_key(pos + 1));
+	std::move(get_rid(pos), get_rid(get_size()), get_rid(pos + 1));
 	// copy memory
-	memcpy(keys + pos * file_hdr->col_tot_len_, key, file_hdr->col_tot_len_);
-	memcpy(rids + pos, &value, sizeof(Rid));
+	memcpy(get_key(pos), key, file_hdr->col_tot_len_);
+	memcpy(get_rid(pos), &value, sizeof(Rid));
+	assert(get_rid(0)->page_no != 0);
+	page_hdr->num_key++;
 	// check if it's the leftest one
 	return 1;
 }
@@ -245,7 +253,7 @@ bool IxIndexHandle::get_value(const char *key, std::vector<Rid> *result, Transac
 	// 提示：使用完buffer_pool提供的page之后，记得unpin page；记得处理并发的上锁
 	auto [leaf, _] = find_leaf_page(key, Operation::FIND, transaction);
 	auto pos = leaf->lower_bound(key);
-	if (pos == leaf->get_size()) {
+	if (pos == leaf->get_size() || ix_compare(key, leaf->get_key(pos), file_hdr_->col_types_, file_hdr_->col_lens_) != 0) {
 		return false;
 	}
 	result->emplace_back(*(Rid *) leaf->get_rid(pos));
@@ -542,7 +550,7 @@ void IxIndexHandle::redistribute(IxNodeHandle *neighbor_node, IxNodeHandle *node
 	} else {
 		// else we choose the neighbor last element
 		int last = neighbor_node->get_size() - 1;
-		node->insert_pair(0, neighbor_node->get_key(last), *(Rid *) neighbor_node->get_rid(last));
+		node->insert_pair(0, neighbor_node->get_key(last), *neighbor_node->get_rid(last));
 		neighbor_node->erase_pair(neighbor_node->get_size() - 1);
 		coalesce_or_redistribute(neighbor_node);
 		memcpy(parent->get_key(index), node->keys, file_hdr_->col_tot_len_);

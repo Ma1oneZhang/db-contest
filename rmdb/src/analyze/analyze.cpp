@@ -34,8 +34,6 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 				throw TableNotFoundError(table);
 			}
 		}
-
-
 		// get all column name
 		std::vector<ColMeta> all_cols;
 		get_all_cols(query->tables, all_cols);

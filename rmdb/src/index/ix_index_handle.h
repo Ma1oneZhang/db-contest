@@ -75,7 +75,7 @@ public:
 		rids = reinterpret_cast<Rid *>(keys + file_hdr->keys_size_);
 	}
 
-	int get_size() { return page_hdr->num_key; }
+	int get_size() const { return page_hdr->num_key; }
 
 	void set_size(int size) { page_hdr->num_key = size; }
 
@@ -178,8 +178,11 @@ private:
 	std::mutex root_latch_;
 
 public:
+	int get_fd_() const { return fd_; }
 	IxIndexHandle(DiskManager *disk_manager, BufferPoolManager *buffer_pool_manager, int fd);
-
+	// for debug only
+	void Draw(BufferPoolManager *bpm, const std::string &outf);
+	void ToGraph(const IxIndexHandle *ih, IxNodeHandle *node, BufferPoolManager *bpm, std::ofstream &out);
 	// for search
 	bool get_value(const char *key, std::vector<Rid> *result, Transaction *transaction);
 
@@ -212,6 +215,10 @@ public:
 	Iid leaf_end() const;
 
 	Iid leaf_begin() const;
+
+	size_t get_idx_len() const {
+		return file_hdr_->col_tot_len_;
+	}
 
 private:
 	// 辅助函数
