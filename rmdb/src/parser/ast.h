@@ -40,9 +40,9 @@ namespace ast {
 	};
 
 	enum OrderByDir {
-		OrderBy_DEFAULT,
-		OrderBy_ASC,
-		OrderBy_DESC
+		OrderBy_DEFAULT,  //默认升序
+		OrderBy_ASC,	  //升序
+		OrderBy_DESC	  //降序
 	};
 
 
