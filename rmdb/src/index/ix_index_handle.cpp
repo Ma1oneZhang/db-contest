@@ -643,13 +643,6 @@ Iid IxIndexHandle::lower_bound(const char *key) {
 Iid IxIndexHandle::upper_bound(const char *key) {
 	auto [node, _] = find_leaf_page(key, Operation::FIND, nullptr);
 	auto pos = node->upper_bound(key);
-	if (pos == node->get_size()) {
-		auto next_leaf = node->get_next_leaf();
-		buffer_pool_manager_->unpin_page(node->get_page_id(), false);
-		if (next_leaf == -1)
-			return leaf_end();
-		return {next_leaf, 0};
-	}
 	auto page_no = node->get_page_no();
 	buffer_pool_manager_->unpin_page(node->get_page_id(), false);
 	return Iid{page_no, pos};

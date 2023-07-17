@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 #include <unistd.h>
 
 #include <fstream>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -322,6 +323,8 @@ void SmManager::create_index(const std::string &tab_name, const std::vector<std:
 	auto ih = ix_manager_->open_index(tab_name, index_cols);
 	int cnt = 0;
 	auto file_handle = fhs_.at(tab_name).get();
+	std::unordered_set<std::string> exist;
+	// check the duplicate
 	for (RmScan rm_scan(file_handle); !rm_scan.is_end(); rm_scan.next()) {
 		auto rec = file_handle->get_record(rm_scan.rid(), context);
 		auto index_rec = std::make_unique<RmRecord>(col_tot_len);
@@ -330,6 +333,12 @@ void SmManager::create_index(const std::string &tab_name, const std::vector<std:
 			memcpy(index_rec->data + tot_offset, rec->data + col.offset, col.len);
 			tot_offset += col.len;
 		}
+		auto rec_bin = std::string(index_rec->data, col_tot_len);
+		if (exist.count(rec_bin)) {
+			drop_index(tab_name, col_names, context);
+			throw DuplicateKeyError("insert key duplicate");
+		}
+		exist.insert(rec_bin);
 		ih->insert_entry(index_rec->data, rm_scan.rid(), context->txn_);
 	}
 	// ih->Draw(buffer_pool_manager_, "after_insert_3000_element.dot");
@@ -345,7 +354,7 @@ void SmManager::create_index(const std::string &tab_name, const std::vector<std:
 											 .col_tot_len = col_tot_len,
 											 .col_num = col_names.size(),
 											 .cols = std::move(index_cols)};
-	
+
 	tab_meta.indexes.push_back(indexes);
 }
 

@@ -219,14 +219,14 @@ void BufferPoolManager::delete_all_pages(int fd) {
 		if (fd == pages_[i].get_page_id().fd && INVALID_PAGE_ID != pages_[i].get_page_id().page_no) {
 			Page *page = &pages_[i];
 			// write back
-			disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+			// disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
 			// remove from page_table
 			page_table_.Erase(page->get_page_id());
 			// reset
 			page->is_dirty_ = false;
 			page->id_ = {-1, -1};
 			page->pin_count_ = 0;
-			page->reset_memory();
+			// page->reset_memory();
 			// add to free list
 			replacer_->unpin(i);
 		}

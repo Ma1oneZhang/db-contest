@@ -29,19 +29,54 @@ bool Planner::get_index_cols(std::string tab_name, std::vector<Condition> curr_c
 	index_col_names.clear();
 	auto &index_meta = sm_manager_->db_.get_table(tab_name).indexes;
 	std::vector<std::string> indexed_col;
+	int maxlen = -1;
 	for (auto &meta: index_meta) {
 		for (auto index_detail: meta.cols) {
 			indexed_col.push_back(index_detail.name);
 		}
-		// 最左匹配要求前面全是equal，最后一个可以是大于小于或range(x > 1 && x < 10)
-		for (auto &cond :curr_conds) {
-			auto pos = std::find(indexed_col.begin(), indexed_col.end(), cond.lhs_col.col_name) - indexed_col.begin();
+		for (auto i = 0ull; i < curr_conds.size(); i++) {
+			auto pos = std::find(indexed_col.begin(), indexed_col.end(), curr_conds[i].lhs_col.col_name) - indexed_col.begin();
 			if (pos == 0) {
-				index_col_names = indexed_col;
+				index_col_names = std::move(indexed_col);
 				return true;
 			}
 		}
-		indexed_col.clear();
+		// 最左匹配要求前面全是equal，最后一个可以是大于小于或range(x > 1 && x < 10)
+		// std::vector<std::vector<bool>> status(3, std::vector<bool>(indexed_col.size(), false));
+		// int match_len = 0;
+		// for (int i = 0; i < curr_conds.size(); i++) {
+		// 	auto &cond = curr_conds[i];
+		// 	auto pos = std::find(indexed_col.begin(), indexed_col.end(), cond.lhs_col.col_name) - indexed_col.begin();
+		// 	if (cond.is_rhs_val && cond.op != OP_NE) {
+		// 		if (pos == 0 || status[1][pos - 1] || status[0][pos] || status[2][pos]) {
+		// 			// do nothing
+		// 			switch (cond.op) {
+		// 				case OP_EQ:
+		// 					status[1][pos] = true;
+		// 					break;
+		// 				case OP_NE:
+		// 					// never reach
+		// 					break;
+		// 				case OP_LT:
+		// 				case OP_LE:
+		// 					status[2][pos] = true;
+		// 					break;
+		// 				case OP_GT:
+		// 				case OP_GE:
+		// 					status[0][pos] = true;
+		// 					break;
+		// 			}
+		// 		} else {
+		// 			break;
+		// 		}
+		// 		match_len = i;
+		// 	}
+		// }
+		// if (match_len > maxlen) {
+		// 	maxlen = match_len;
+		// 	index_col_names = std::move(indexed_col);
+		// }
+		// indexed_col.clear();
 	}
 	return false;
 }

@@ -210,11 +210,7 @@ public:
 			}
 			auto pos = it_pos - index_col_names_.begin();
 			if (cond.is_rhs_val && cond.op != OP_NE) {
-				if (pos == 0) {
-					// do nothing
-				} else if (status[1][pos - 1]) {
-					// do nothing
-				} else if (status[0][pos] || status[2][pos]) {
+				if (pos == 0 || status[1][pos - 1] || status[0][pos] || status[2][pos]) {
 					// do nothing
 				} else {
 					break;
@@ -287,6 +283,7 @@ public:
 						if (status[0][pos]) {
 							break;
 						}
+						status[0][pos] = true;
 						switch (col->type) {
 							case TYPE_INT:
 								switch (cond.rhs_val.type) {
@@ -395,7 +392,7 @@ public:
 		}
 		// 求下界
 		size_t cnt = 0;
-		for (size_t i = 0; i < conds_.size(); i++) {
+		for (size_t i = 0; i < index_col_names_.size(); i++) {
 			if (status[0][i] || status[1][i])
 				cnt++;
 			else
@@ -431,7 +428,7 @@ public:
 		begin_ = ix_handle_->lower_bound(lower_cmp_key_->data);
 		// 求上界
 		cnt = 0;
-		for (size_t i = 0; i < conds_.size(); i++) {
+		for (size_t i = 0; i < index_col_names_.size(); i++) {
 			if (status[1][i] || status[2][i])
 				cnt++;
 			else
