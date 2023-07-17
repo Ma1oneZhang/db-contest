@@ -14,7 +14,10 @@ See the Mulan PSL v2 for more details. */
 #include "execution_manager.h"
 #include "executor_abstract.h"
 #include "index/ix.h"
+#include "index/ix_index_handle.h"
 #include "system/sm.h"
+#include "system/sm_meta.h"
+#include <memory>
 
 class InsertExecutor : public AbstractExecutor {
 private:
@@ -53,6 +56,23 @@ public:
 				throw IncompatibleTypeError(coltype2str(col.type), coltype2str(val.type));
 			}
 		}
+		// check if it not unique
+		for (size_t i = 0; i < tab_.indexes.size(); ++i) {
+			auto &index = tab_.indexes[i];
+			auto ih = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name_, index.cols)).get();
+			std::unique_ptr<char> key = std::make_unique<char>(index.col_tot_len);
+			int offset = 0;
+			for (size_t i = 0; i < index.col_num; ++i) {
+				memcpy(key.get() + offset, rec.data + index.cols[i].offset, index.cols[i].len);
+				offset += index.cols[i].len;
+			}
+			std::vector<Rid> res;
+			auto exist = ih->get_value(key.get(), &res, context_->txn_);
+			// auto zzz = fh_->get_record(res[0], nullptr);
+			if (exist) {
+				throw DuplicateKeyError("insert key duplicate");
+			}
+		}
 		// Insert into record file
 		rid_ = fh_->insert_record(rec.data, context_);
 
@@ -60,13 +80,13 @@ public:
 		for (size_t i = 0; i < tab_.indexes.size(); ++i) {
 			auto &index = tab_.indexes[i];
 			auto ih = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name_, index.cols)).get();
-			char *key = new char[index.col_tot_len];
+			std::unique_ptr<char> key = std::make_unique<char>(index.col_tot_len);
 			int offset = 0;
 			for (size_t i = 0; i < index.col_num; ++i) {
-				memcpy(key + offset, rec.data + index.cols[i].offset, index.cols[i].len);
+				memcpy(key.get() + offset, rec.data + index.cols[i].offset, index.cols[i].len);
 				offset += index.cols[i].len;
 			}
-			ih->insert_entry(key, rid_, context_->txn_);
+			ih->insert_entry(key.get(), rid_, context_->txn_);
 		}
 		return nullptr;
 	}
