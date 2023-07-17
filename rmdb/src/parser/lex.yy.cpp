@@ -1141,54 +1141,54 @@ YY_RULE_SETUP
 /* polymerization*/
 case 40:
 YY_RULE_SETUP
-#line 92 "lex.l"
+#line 93 "lex.l"
 { return SUM; }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 93 "lex.l"
+#line 94 "lex.l"
 { return COUNT; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 94 "lex.l"
+#line 95 "lex.l"
 { return MAX; }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 95 "lex.l"
+#line 96 "lex.l"
 { return MIN; }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 96 "lex.l"
+#line 97 "lex.l"
 { return AS; }
 	YY_BREAK
 /* operators */
 case 45:
 YY_RULE_SETUP
-#line 98 "lex.l"
+#line 99 "lex.l"
 { return GEQ; }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 99 "lex.l"
+#line 100 "lex.l"
 { return LEQ; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 100 "lex.l"
+#line 101 "lex.l"
 { return NEQ; }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 101 "lex.l"
+#line 102 "lex.l"
 { return yytext[0]; }
 	YY_BREAK
 /* id */
 case 49:
 YY_RULE_SETUP
-#line 103 "lex.l"
+#line 104 "lex.l"
 {
     yylval->sv_str = yytext;
     return IDENTIFIER;
@@ -1197,7 +1197,7 @@ YY_RULE_SETUP
 /* literals */
 case 50:
 YY_RULE_SETUP
-#line 108 "lex.l"
+#line 109 "lex.l"
 {
     auto number = std::string(yytext);
     try{
@@ -1215,7 +1215,7 @@ YY_RULE_SETUP
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 122 "lex.l"
+#line 123 "lex.l"
 {
     yylval->sv_float = atof(yytext);
     return VALUE_FLOAT;
@@ -1224,7 +1224,7 @@ YY_RULE_SETUP
 case 52:
 /* rule 52 can match eol */
 YY_RULE_SETUP
-#line 126 "lex.l"
+#line 127 "lex.l"
 {
     yylval->sv_str = std::string(yytext + 1, strlen(yytext) - 2);
     return VALUE_STRING;
@@ -1233,18 +1233,18 @@ YY_RULE_SETUP
 /* EOF */
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(STATE_COMMENT):
-#line 131 "lex.l"
+#line 132 "lex.l"
 { return T_EOF; }
 	YY_BREAK
 /* unexpected char */
 case 53:
 YY_RULE_SETUP
-#line 133 "lex.l"
+#line 134 "lex.l"
 { std::cerr << "Lexer Error: unexpected character " << yytext[0] << std::endl; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 134 "lex.l"
+#line 135 "lex.l"
 ECHO;
 	YY_BREAK
 #line 1251 "lex.yy.cpp"
@@ -2213,6 +2213,6 @@ void yyfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 134 "lex.l"
+#line 135 "lex.l"
 
 

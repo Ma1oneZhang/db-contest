@@ -151,6 +151,9 @@ namespace ast {
 				std::cout << "ORDER BY\n";
 				print_node_list(x->cols, offset);
 				print_val(orderByDir2str(x->orderby_dir), offset); 
+			} else if (auto x = std::dynamic_pointer_cast<Limit>(node)) {
+				std::cout << "LIMIT\n";
+				print_val(x->limit_size, offset); 
 			} else if (auto x = std::dynamic_pointer_cast<SetClause>(node)) {
 				if (x->is_self) {
 					std::cout << "self operation SET_CLAUSE\n";
@@ -198,7 +201,7 @@ namespace ast {
 					print_val_list(x->tabs, offset);
 					if (x->conds.size() > 0) print_node_list(x->conds, offset);
 					print_node_list(x->orders, offset);
-
+					if (x->has_limit) print_node(x->limit, offset); 
 				}
 			} else if (auto x = std::dynamic_pointer_cast<TxnBegin>(node)) {
 				std::cout << "BEGIN\n";

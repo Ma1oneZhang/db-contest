@@ -41,7 +41,7 @@ int main() {
 		// "select MAX(a) from t;",
 		// "select MAX(a), MIN(b) from t;",
 		// "select * from t;",
-		"select * from t order by a,b desc, c asc;",
+		"select * from t order by a,b desc, c asc limit 3;",
 		"help;",
 		"",
 	};
