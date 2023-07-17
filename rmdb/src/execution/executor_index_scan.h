@@ -46,9 +46,7 @@ private:
 
 	Iid begin_, end_;
 	std::unique_ptr<RmRecord> lower_cmp_key_;
-	bool is_lower;
 	std::unique_ptr<RmRecord> upper_cmp_key_;
-	bool is_upper;
 	std::vector<int> offsets_;
 	bool checkCondition(const std::unique_ptr<RmRecord> &rec) {
 		for (auto &cond: conds_) {
@@ -201,13 +199,17 @@ public:
 			auto rhs_pos = std::find(index_col_names_.begin(), index_col_names_.end(), rhs.lhs_col.col_name) - index_col_names_.begin();
 			return lhs_pos < rhs_pos;
 		});
-		std::vector<std::vector<bool>> status(3, std::vector<bool>(200, false));
-		size_t cnt_left = 0, cnt_right = 0;
+		std::vector<std::vector<bool>> status(3, std::vector<bool>(index_col_names_.size() + 8, false));
+		// meet the requirement
 		for (size_t i = 0; i < conds_.size(); i++) {
 			const auto &cond = conds_[i];
 			auto col = get_col(cols_, cond.lhs_col);
-			auto pos = std::find(index_col_names_.begin(), index_col_names_.end(), cond.lhs_col.col_name) - index_col_names_.begin();
-			if (cond.is_rhs_val && (cond.op != OP_EQ && cond.op != OP_NE)) {
+			auto it_pos = std::find(index_col_names_.begin(), index_col_names_.end(), cond.lhs_col.col_name);
+			if (it_pos == index_col_names_.end()) {
+				continue;
+			}
+			auto pos = it_pos - index_col_names_.begin();
+			if (cond.is_rhs_val && cond.op != OP_NE) {
 				if (pos == 0) {
 					// do nothing
 				} else if (status[1][pos - 1]) {
@@ -224,10 +226,7 @@ public:
 						if (status[1][pos]) {
 							break;
 						}
-						is_lower = true;
-						is_upper = true;
 						status[1][pos] = true;
-						cnt_left++, cnt_right++;
 						switch (col->type) {
 							case TYPE_INT:
 								switch (cond.rhs_val.type) {
@@ -285,12 +284,9 @@ public:
 						break;
 					case OP_GT:
 					case OP_GE:
-						cnt_left++;
-						is_lower = true;
 						if (status[0][pos]) {
 							break;
 						}
-						status[0][pos] = true;
 						switch (col->type) {
 							case TYPE_INT:
 								switch (cond.rhs_val.type) {
@@ -340,8 +336,6 @@ public:
 						break;
 					case OP_LE:
 					case OP_LT:
-						cnt_right++;
-						is_upper = true;
 						if (status[2][pos]) {
 							break;
 						}
@@ -394,150 +388,83 @@ public:
 						}
 						break;
 					case OP_NE:
-						throw std::logic_error("somewhere unknown");
-				}
-			}
-		}
-		if (is_lower) {
-			size_t cnt = 0;
-			for (size_t i = 0; i < conds_.size(); i++) {
-				if (status[0][i] || status[1][i])
-					cnt++;
-				else
-					break;
-			}
-			if (cnt == cnt_left) {
-				if (cnt < index_col_names_.size()) {
-					for (; cnt < index_col_names_.size(); cnt++) {
-						const auto &name = index_col_names_[cnt];
-						for (auto &col: cols_) {
-							if (col.name == name) {
-								switch (col.type) {
-									case TYPE_INT:
-										*(int *) (lower_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int>::min();
-										break;
-									case TYPE_BIGINT:
-										*(int64_t *) (lower_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int64_t>::min();
-										break;
-									case TYPE_FLOAT:
-										*(double *) (lower_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<double>::min();
-										break;
-									case TYPE_STRING:
-										memset(lower_cmp_key_->data + offsets_[cnt], 0, col.len);
-										break;
-									case TYPE_DATETIME:
-										memset(lower_cmp_key_->data + offsets_[cnt], 0, col.len);
-										break;
-									default:
-										throw std::logic_error("not supported");
-								}
-								break;
-							}
-						}
-					}
-				}
-				begin_ = ix_handle_->lower_bound(lower_cmp_key_->data);
-			}
-		} else {
-			for (size_t cnt = 0; cnt < index_col_names_.size(); cnt++) {
-				const auto &name = index_col_names_[cnt];
-				for (auto &col: cols_) {
-					if (col.name == name) {
-						switch (col.type) {
-							case TYPE_INT:
-								*(int *) (lower_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int>::min();
-								break;
-							case TYPE_BIGINT:
-								*(int64_t *) (lower_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int64_t>::min();
-								break;
-							case TYPE_FLOAT:
-								*(double *) (lower_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<double>::min();
-								break;
-							case TYPE_STRING:
-								memset(lower_cmp_key_->data + offsets_[cnt], 0, col.len);
-								break;
-							case TYPE_DATETIME:
-								memset(lower_cmp_key_->data + offsets_[cnt], 0, col.len);
-								break;
-							default:
-								throw std::logic_error("not supported");
-						}
+						// never reach
 						break;
-					}
 				}
 			}
-			begin_ = ix_handle_->lower_bound(lower_cmp_key_->data);
 		}
-		if (is_upper) {
-			size_t cnt = 0;
-			for (size_t i = 0; i < conds_.size(); i++) {
-				if (status[1][i] || status[2][i])
-					cnt++;
-				else
+		// 求下界
+		size_t cnt = 0;
+		for (size_t i = 0; i < conds_.size(); i++) {
+			if (status[0][i] || status[1][i])
+				cnt++;
+			else
+				break;
+		}
+		for (; cnt < index_col_names_.size(); cnt++) {
+			const auto &name = index_col_names_[cnt];
+			for (auto &col: cols_) {
+				if (col.name == name) {
+					switch (col.type) {
+						case TYPE_INT:
+							*(int *) (lower_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int>::min();
+							break;
+						case TYPE_BIGINT:
+							*(int64_t *) (lower_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int64_t>::min();
+							break;
+						case TYPE_FLOAT:
+							*(double *) (lower_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<double>::min();
+							break;
+						case TYPE_STRING:
+							memset(lower_cmp_key_->data + offsets_[cnt], 0, col.len);
+							break;
+						case TYPE_DATETIME:
+							memset(lower_cmp_key_->data + offsets_[cnt], 0, col.len);
+							break;
+						default:
+							throw std::logic_error("not supported");
+					}
 					break;
-			}
-			if (cnt == cnt_right) {
-				if (cnt < index_col_names_.size()) {
-					for (; cnt < index_col_names_.size(); cnt++) {
-						const auto &name = index_col_names_[cnt];
-						for (auto &col: cols_) {
-							if (col.name == name) {
-								switch (col.type) {
-									case TYPE_INT:
-										*(int *) (upper_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int>::max();
-										break;
-									case TYPE_FLOAT:
-										*(double *) (upper_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<double>::max();
-										break;
-									case TYPE_BIGINT:
-										*(int64_t *) (upper_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int64_t>::max();
-										break;
-									case TYPE_STRING:
-										memset(upper_cmp_key_->data + offsets_[cnt], 0x7f, col.len);
-										break;
-									case TYPE_DATETIME:
-										memset(upper_cmp_key_->data + offsets_[cnt], 0x7f, col.len);
-										break;
-									default:
-										throw std::logic_error("not supported");
-								}
-								break;
-							}
-						}
-					}
-				}
-				end_ = ix_handle_->upper_bound(upper_cmp_key_->data);
-			}
-		} else {
-			for (size_t cnt = 0; cnt < index_col_names_.size(); cnt++) {
-				const auto &name = index_col_names_[cnt];
-				for (auto &col: cols_) {
-					if (col.name == name) {
-						switch (col.type) {
-							case TYPE_INT:
-								*(int *) (upper_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int>::max();
-								break;
-							case TYPE_BIGINT:
-								*(int64_t *) (upper_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int64_t>::max();
-								break;
-							case TYPE_FLOAT:
-								*(double *) (upper_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<double>::max();
-								break;
-							case TYPE_STRING:
-								memset(upper_cmp_key_->data + offsets_[cnt], 0x7f, col.len);
-								break;
-							case TYPE_DATETIME:
-								memset(upper_cmp_key_->data + offsets_[cnt], 0x7f, col.len);
-								break;
-							default:
-								throw std::logic_error("not supported");
-						}
-						break;
-					}
 				}
 			}
-			end_ = ix_handle_->upper_bound(upper_cmp_key_->data);
 		}
+		begin_ = ix_handle_->lower_bound(lower_cmp_key_->data);
+		// 求上界
+		cnt = 0;
+		for (size_t i = 0; i < conds_.size(); i++) {
+			if (status[1][i] || status[2][i])
+				cnt++;
+			else
+				break;
+		}
+		for (; cnt < index_col_names_.size(); cnt++) {
+			const auto &name = index_col_names_[cnt];
+			for (auto &col: cols_) {
+				if (col.name == name) {
+					switch (col.type) {
+						case TYPE_INT:
+							*(int *) (upper_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int>::max();
+							break;
+						case TYPE_FLOAT:
+							*(double *) (upper_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<double>::max();
+							break;
+						case TYPE_BIGINT:
+							*(int64_t *) (upper_cmp_key_->data + offsets_[cnt]) = std::numeric_limits<int64_t>::max();
+							break;
+						case TYPE_STRING:
+							memset(upper_cmp_key_->data + offsets_[cnt], 0x7f, col.len);
+							break;
+						case TYPE_DATETIME:
+							memset(upper_cmp_key_->data + offsets_[cnt], 0x7f, col.len);
+							break;
+						default:
+							throw std::logic_error("not supported");
+					}
+					break;
+				}
+			}
+		}
+		end_ = ix_handle_->upper_bound(upper_cmp_key_->data);
 		scan_ = std::make_unique<IxScan>(ix_handle_, begin_, end_, sm_manager_->get_bpm());
 
 		while (!scan_->is_end()) {
