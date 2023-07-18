@@ -137,7 +137,7 @@ struct AggregateCmp {
 
 	AggregateCmp() :is_first(true) { }
 
-	std::string print(AggregateDir type) {
+	std::string get_val(AggregateDir type) {
 		switch (type) {
 			case Aggregate_MIN: 
 			case Aggregate_MAX: {
