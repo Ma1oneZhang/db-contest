@@ -159,7 +159,6 @@ public:
 			return std::make_unique<SortExecutor>(convert_plan_executor(x->subplan_, context),
 																						x->fh,
 																						x->cols,
-																						x->order_cols,
 																						x->order_idx, 
 																						x->order_bys,
 																						x->limit);

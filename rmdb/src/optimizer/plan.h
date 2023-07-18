@@ -114,13 +114,11 @@ public:
 						std::vector<std::string> tables,
 						std::shared_ptr<Plan> subplan, 
 						std::vector<ColMeta> cols_, 
-						std::vector<ColMeta> order_cols_, 
 						std::vector<size_t> order_idx_,
 						std::vector<ast::OrderByDir> order_bys_, 
 						std::shared_ptr<ast::Limit> limit_) {
 		Plan::tag = tag;
 		subplan_ = std::move(subplan);
-		order_cols = std::move(order_cols_);
 		order_idx = std::move(order_idx_); 
 		order_bys = std::move(order_bys_); 
 		cols = std::move(cols_); 
@@ -131,7 +129,6 @@ public:
 	std::shared_ptr<Plan> subplan_;
 	std::vector<ColMeta> cols; 
 	RmFileHandle *fh;
-	std::vector<ColMeta> order_cols; 
 	std::vector<size_t> order_idx; 
 	std::vector<ast::OrderByDir> order_bys; 
 	bool has_limit; 

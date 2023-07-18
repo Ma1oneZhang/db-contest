@@ -24,7 +24,6 @@ class SortExecutor : public AbstractExecutor {
 private:
 	std::unique_ptr<AbstractExecutor> prev_;
 	std::vector<ColMeta> cols_;   		// 所有Col
-	std::vector<ColMeta> order_cols_;   //排序的字段
 	std::vector<size_t> order_idx_;     //排序的列在cols中的序号
 	std::vector<ast::OrderByDir> order_bys_; //排序字段的类型
 	bool has_limit_; 
@@ -50,13 +49,11 @@ public:
 	SortExecutor(std::unique_ptr<AbstractExecutor> prev, 
 					RmFileHandle *fh,
 					std::vector<ColMeta> cols, 
-					std::vector<ColMeta> order_cols, 
 					std::vector<size_t> order_idx,
 					std::vector<ast::OrderByDir> order_bys,
 					std::shared_ptr<ast::Limit> limit) {
 		prev_ = std::move(prev);
 		cols_ = std::move(cols); 
-		order_cols_ = std::move(order_cols); 
 		order_idx_ = std::move(order_idx); 
 		order_bys_ = std::move(order_bys); 
 		limit_ = std::move(limit); 

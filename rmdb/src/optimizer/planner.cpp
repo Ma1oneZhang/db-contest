@@ -316,7 +316,7 @@ std::shared_ptr<Plan> Planner::generate_sort_plan(std::shared_ptr<Query> query, 
 			// for (auto colmeta : all_cols) {
 			for (size_t i = 0; i < all_cols.size(); i ++ ) {
 				auto &colmeta = all_cols[i]; 
-				if (colmeta.name.compare(col->col_name) == 0) {
+				if (colmeta.name.compare(col->col_name) == 0 && (col->tab_name == "" || col->tab_name == colmeta.tab_name)) {
 					order_cols.push_back(colmeta); 
 					order_idx.push_back(i); 
 					order_bys.push_back(order->orderby_dir); 
@@ -330,7 +330,6 @@ std::shared_ptr<Plan> Planner::generate_sort_plan(std::shared_ptr<Query> query, 
 									std::move(tables),
 									std::move(plan), 
 									std::move(all_cols), 
-									std::move(order_cols), 
 									std::move(order_idx),
 									std::move(order_bys), 
 									std::move(x->limit));
