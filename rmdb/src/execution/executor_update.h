@@ -163,9 +163,9 @@ public:
 		std::vector<std::unique_ptr<RmRecord>> updated_records_;
 		for (auto scan = std::make_unique<RmScan>(fh_); !scan->is_end(); scan->next()) {
 			auto rec = fh_->get_record(scan->rid(), nullptr);
-			// check singal record
+			// check every record
 			if (checkCondition(rec)) {
-				auto original_rec = std::make_unique<RmRecord>(*rec.get());
+				auto original_rec = std::make_unique<RmRecord>(*rec);
 				original_records_.emplace_back(std::move(original_rec));
 				// make set_clause apply on it
 				for (auto set_clause: set_clauses_) {
@@ -230,7 +230,7 @@ public:
 			}
 		}
 		if (tab_.indexes.size() > 0) {
-			// means need check
+			// means need unique check
 			std::unordered_set<std::string> vailated_records;
 			for (auto &updated_rec: updated_records_) {
 				for (size_t i = 0; i < tab_.indexes.size(); ++i) {
@@ -276,7 +276,7 @@ public:
 					std::vector<Rid> res;
 					ih->get_value(key->data, &res, context_->txn_);
 					if (res.size() != 0) {
-						// insert original record to index
+						// insert original record back to index
 						for (size_t j = 0; j < original_records_.size(); j++) {
 							const auto &original_rec = original_records_[j];
 							const auto &rid = rids[j];
@@ -289,7 +289,7 @@ public:
 									memcpy(key->data + offset, original_rec->data + index.cols[i].offset, index.cols[i].len);
 									offset += index.cols[i].len;
 								}
-								auto res = ih->insert_entry(key->data, rid, context_->txn_);
+								ih->insert_entry(key->data, rid, context_->txn_);
 							}
 						}
 						throw DuplicateKeyError("update key duplicate");
