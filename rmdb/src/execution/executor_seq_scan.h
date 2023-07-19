@@ -187,5 +187,7 @@ public:
 		return fh_->get_record(rid_, nullptr);
 	}
 
+	std::string getType() override { return "SeqScanExecutor"; };
+
 	Rid &rid() override { return rid_; }
 };

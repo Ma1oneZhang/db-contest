@@ -222,5 +222,8 @@ public:
 		return len_;
 	}
 
+	std::string getType() override { return "NestedLoopJoinExecutor"; };
+
+
 	Rid &rid() override { return _abstract_rid; }
 };

@@ -42,7 +42,7 @@ private:
 		ColType type; 
 		size_t len; 
 	}; 
-	std::vector<std::pair<std::vector<node>, Rid>> order_list; //所有的数据
+	std::vector<std::pair<std::vector<node>, std::unique_ptr<RmRecord>>> order_list; //所有的数据
 	bool has_sorted; //是否已经完成排序
 
 public:
@@ -70,11 +70,24 @@ public:
 	}
 	void beginTuple() override {
 		// prev_->beginTuple();
+		//处理偏移值
+		// for ()
 
 		for (prev_->beginTuple(); !prev_->is_end(); prev_->nextTuple()) {
-			auto Tuple = this->Next();
-			// 只存储要排序的列
+			auto Tuple = prev_->Next();
+			
 
+			if (prev_->getType() == "NestedLoopJoinExecutor") { //nestedLoop中的偏移值改变了的, 需要更新
+				auto &prev_cols = prev_->cols(); 
+				for (size_t i = 0; i < prev_cols.size(); i ++ ) {
+					auto &prev_col = prev_cols[i]; 
+					for (auto &col : cols_) {
+						if (col.name == prev_col.name && col.tab_name == prev_col.tab_name) {
+							col.offset = prev_col.offset; 
+						}
+					}
+				}
+			}
 			std::vector<node> columns; 			 //存储需要排序的数据
 			for (size_t i = 0; i < order_idx_.size(); i ++ ) {
 				const auto idx = order_idx_[i]; 
@@ -96,12 +109,12 @@ public:
 			}
 
 			//将当前行的数据存储在order_list中
-			auto rid = prev_->rid();
-			order_list.push_back({std::move(columns), std::move(rid)}); 
+			order_list.push_back({std::move(columns), std::move(Tuple)});
 		}
 
-		std::sort(order_list.begin(), order_list.end(), [&](const std::pair<std::vector<node>, Rid> a, 
-																			const std::pair<std::vector<node>, Rid> b){
+
+		std::sort(order_list.begin(), order_list.end(), [&](const std::pair<std::vector<node>, std::unique_ptr<RmRecord>> &a, 
+																			const std::pair<std::vector<node>, std::unique_ptr<RmRecord>> &b){
 			for (size_t i = 0; i < order_idx_.size(); i ++ ) { //对所有排序的表就行搜索
 				const auto &l = a.first[i]; 
 				const auto &r = b.first[i]; 
@@ -125,15 +138,21 @@ public:
 	}
 
 	bool is_end() const override {
-		if (!has_sorted || !has_limit_) { //如果没有排序成功 或者没有LIMIT, 直接返回prev_
+		if (!has_sorted) { //如果没有排序成功 或者没有LIMIT, 直接返回prev_
 			return prev_->is_end();
 		} else {
-			return cur_tuple >= limit_->limit_size; 
+			if (has_limit_ && cur_tuple >= limit_->limit_size) return true; 
+			if (cur_tuple >= order_list.size()) return true; 
+			return false; 
 		}
 	}
 
 	void nextTuple() override {
-		prev_->nextTuple();
+		if (!has_sorted) {
+			prev_->nextTuple();
+		} else {
+			/** do nothing*/
+		}
 	}
 
 
@@ -141,10 +160,10 @@ public:
 		if (!has_sorted) {
 			return prev_->Next(); 
 		} else {
-			auto rid = order_list[cur_tuple ++ ].second; 
-			return fh_->get_record(rid, nullptr); 
+			// return has_sorted[cur_tuple ++ ].second;
+			auto ret = std::make_unique<RmRecord>(*order_list[cur_tuple ++ ].second.get());
+			return ret; 
 		}
-
 	}
 
 	Rid &rid() override { 
