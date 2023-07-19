@@ -9,12 +9,15 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include "analyze.h"
+#include "common/common.h"
 #include "defs.h"
 #include "errors.h"
 #include "parser/ast.h"
 #include "utils/log.h"
 #include <memory>
 #include <unordered_map>
+#include <set>
+#include <vector>
 /**
  * @description: 分析器，进行语义分析和查询重写，需要检查不符合语义规定的部分
  * @param {shared_ptr<ast::TreeNode>} parse parser生成的结果集
@@ -31,27 +34,70 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 				throw TableNotFoundError(table);
 			}
 		}
-		// 处理target list，再target list中添加上表名，例如 a.id
-		for (auto &sv_sel_col: x->cols) {
-			TabCol sel_col = {.tab_name = sv_sel_col->tab_name, .col_name = sv_sel_col->col_name};
-			query->cols.push_back(sel_col);
-		}
 		// get all column name
 		std::vector<ColMeta> all_cols;
 		get_all_cols(query->tables, all_cols);
-		if (query->cols.empty()) {
-			// select all columns
-			// select * statment
-			for (auto &col: all_cols) {
-				TabCol sel_col = {.tab_name = col.tab_name, .col_name = col.name};
+
+		if (x->has_aggregate) { //当前是聚合查询
+			auto &aggregates = x->aggregates; 
+			std::set<TabCol> sel_cols; //所有需要选择的列
+
+			//将所有的aggregate都放入到ColMeta中的第一个袁术
+			auto &bas_aggre = sm_manager_->db_.get_table(query->tables.front()).get_aggregates(); 
+			bas_aggre.clear();  //将其清空, 之前的元素
+
+			// 将所有aggregate情况加入到ColMeta中
+			for (size_t i = 0; i < all_cols.size(); i ++ ) {
+				auto &col = all_cols[i]; 
+				for (auto aggregate : aggregates) {
+					TabCol sel_col = {.tab_name = col.tab_name, .col_name = col.name};
+
+					if (!aggregate->cols.size() && i == 0) {
+						TabCol sel_col = {.tab_name = all_cols.front().tab_name, .col_name = all_cols.front().name};
+						aggregate->cols.push_back(std::make_shared<ast::Col>(sel_col.tab_name, sel_col.col_name)); 
+						sel_cols.insert(sel_col); 
+						bas_aggre.push_back(aggregate); 
+					} else if (aggregate->cols.size() 
+							// && aggregate->cols.front()->tab_name == sel_col.tab_name 
+							&& aggregate->cols.front()->col_name == sel_col.col_name) {
+
+						bas_aggre.push_back(std::move(aggregate)); 
+						sel_cols.insert(sel_col); 
+					}
+				}
+			}
+			// 特判COUNT(*) 情况
+			for (auto &aggregate : aggregates) {
+				if (aggregate->cols.size() == 0) {
+
+				}
+			}
+			query->cols = std::vector<TabCol>(sel_cols.begin(), sel_cols.end()); 
+		} else {
+			// 处理target list，再target list中添加上表名，例如 a.id
+			for (auto &sv_sel_col: x->cols) {
+				TabCol sel_col = {.tab_name = sv_sel_col->tab_name, .col_name = sv_sel_col->col_name};
 				query->cols.push_back(sel_col);
 			}
-		} else {
-			// infer table name from column name
-			for (auto &sel_col: query->cols) {
-				sel_col = check_column(all_cols, sel_col);// 列元数据校验
+			if (query->cols.empty()) {
+				// select all columns
+				// select * statment
+				for (auto &col: all_cols) {
+					TabCol sel_col = {.tab_name = col.tab_name, .col_name = col.name};
+					query->cols.push_back(sel_col);
+				}
+			} else {
+				// infer table name from column name
+				for (auto &sel_col: query->cols) {
+					sel_col = check_column(all_cols, sel_col);// 列元数据校验
+				}
 			}
 		}
+
+
+
+
+
 		std::unordered_map<std::string, std::vector<std::string>> cnt;
 		for (auto i: all_cols) {
 			cnt[i.name].push_back(i.tab_name);

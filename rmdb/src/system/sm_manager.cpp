@@ -11,10 +11,12 @@ See the Mulan PSL v2 for more details. */
 #include "sm_manager.h"
 
 #include <cstddef>
+#include <ostream>
 #include <sys/stat.h>
 #include <unistd.h>
 
 #include <fstream>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -22,6 +24,7 @@ See the Mulan PSL v2 for more details. */
 #include "errors.h"
 #include "index/ix.h"
 #include "record/rm.h"
+#include "record/rm_defs.h"
 #include "record/rm_scan.h"
 #include "record_printer.h"
 #include "system/sm_meta.h"
@@ -254,7 +257,7 @@ void SmManager::drop_table(const std::string &tab_name, Context *context) {
 	}
 	if (indexes.size()) {
 		ix_manager_->destroy_index(tab_name, indexes);
-		ihs_.erase(tab_name); 
+		ihs_.erase(tab_name);
 	}
 	fhs_.erase(tab_name);
 	db_.tabs_.erase(tab_name);
@@ -267,24 +270,24 @@ void SmManager::drop_table(const std::string &tab_name, Context *context) {
  * @param {string&} tab_name 表的名称
  * @param {Context*} context
  */
-void SmManager::show_index(const std::string& tab_name, Context* context) {
+void SmManager::show_index(const std::string &tab_name, Context *context) {
 
 	std::fstream outfile;
 	outfile.open("output.txt", std::ios::out | std::ios::app);
 	RecordPrinter printer(1);
-	auto& tab_meta = db_.get_table(tab_name); 
+	auto &tab_meta = db_.get_table(tab_name);
 
-	for (auto index : tab_meta.indexes) {
-		std::string str = ""; 
+	for (auto index: tab_meta.indexes) {
+		std::string str = "";
 		str = "| " + tab_name + " | " + "unique" + " | " + "(";
-		for (size_t i = 0; i < index.col_num; i ++ ) {
-			if (i >= 1) str += ","; 
+		for (size_t i = 0; i < index.col_num; i++) {
+			if (i >= 1) str += ",";
 			str += index.cols[i].name;
 		}
-		str = str + ")" + " |\n"; 
+		str = str + ")" + " |\n";
 
 		printer.print_string(str, 40, context);
-		outfile << str; 
+		outfile << str;
 	}
 
 	outfile.close();
@@ -297,48 +300,69 @@ void SmManager::show_index(const std::string& tab_name, Context* context) {
  * @param {Context*} context
  */
 void SmManager::create_index(const std::string &tab_name, const std::vector<std::string> &col_names, Context *context) {
-	auto& tab_meta = db_.get_table(tab_name); 
+	auto &tab_meta = db_.get_table(tab_name);
 
 	//如果当前索引已经存在
 	if (tab_meta.is_index(col_names)) {
-		throw IndexExistsError(tab_name, col_names); 
+		throw IndexExistsError(tab_name, col_names);
 	}
 
 	//需要创建的索引
 	std::vector<ColMeta> index_cols;
-	size_t col_tot_len = 0; 
-	for (auto col_name : col_names) {
-		col_tot_len += col_name.size(); 
-		auto col = tab_meta.get_col(col_name); 
-		index_cols.emplace_back(*col); 
+	size_t col_tot_len = 0;
+	for (auto col_name: col_names) {
+		auto col = tab_meta.get_col(col_name);
+		col_tot_len += col->len;
+		index_cols.emplace_back(*col);
 	}
-	
+
 	if (index_cols.size()) {
-		ix_manager_->create_index(tab_name, index_cols); 
+		ix_manager_->create_index(tab_name, index_cols);
 	}
-
-	auto ih  =ix_manager_->open_index(tab_name, index_cols); 
-	auto file_handle = fhs_.at(tab_name).get(); 
-
+	auto index_name_ = ix_manager_->get_index_name(tab_name, index_cols);
+	auto ih = ix_manager_->open_index(tab_name, index_cols);
+	auto file_handle = fhs_.at(tab_name).get();
+	// check the duplicate
+	std::unordered_set<std::string> vaildate_set;
 	for (RmScan rm_scan(file_handle); !rm_scan.is_end(); rm_scan.next()) {
-		auto rec = file_handle->get_record(rm_scan.rid(), context); 
-		auto *key = rec->data + index_cols[0].offset;
-		ih->insert_entry(key, rm_scan.rid(), context->txn_); 
+		auto rec = file_handle->get_record(rm_scan.rid(), context);
+		auto index_rec = std::make_unique<RmRecord>(col_tot_len);
+		int tot_offset = 0;
+		for (auto &col: index_cols) {
+			memcpy(index_rec->data + tot_offset, rec->data + col.offset, col.len);
+			tot_offset += col.len;
+		}
+		auto bin_data = std::string(index_rec->data, col_tot_len);
+		if (vaildate_set.count(bin_data)) {
+			throw DuplicateKeyError("update key duplicate");
+		}
+		vaildate_set.insert(bin_data);
 	}
+	for (RmScan rm_scan(file_handle); !rm_scan.is_end(); rm_scan.next()) {
+		auto rec = file_handle->get_record(rm_scan.rid(), context);
+		auto index_rec = std::make_unique<RmRecord>(col_tot_len);
+		int tot_offset = 0;
+		for (auto &col: index_cols) {
+			memcpy(index_rec->data + tot_offset, rec->data + col.offset, col.len);
+			tot_offset += col.len;
+		}
+		ih->insert_entry(index_rec->data, rm_scan.rid(), context->txn_);
+	}
+	// ih->Draw(buffer_pool_manager_, "after_insert_3000_element.dot");
 
 	// index_name = warehouse_id_xxx_xxx.idx
-	auto index_name = ix_manager_->get_index_name(tab_name, index_cols); 
-	assert(ihs_.count(index_name) == 0); 
-	ihs_.emplace(index_name, std::move(ih)); 
+	auto index_name = ix_manager_->get_index_name(tab_name, index_cols);
+	assert(ihs_.count(index_name) == 0);
+	ihs_.emplace(index_name, std::move(ih));
 
 
 	//加入索引数据
 	IndexMeta indexes = {.tab_name = tab_name,
-						 .col_tot_len = col_tot_len, 
-						 .col_num = col_names.size(), 
-						 .cols = std::move(index_cols)}; 
+											 .col_tot_len = col_tot_len,
+											 .col_num = col_names.size(),
+											 .cols = std::move(index_cols)};
 
-	tab_meta.indexes.push_back(indexes); 
+	tab_meta.indexes.push_back(indexes);
 }
 
 /**
@@ -352,24 +376,25 @@ void SmManager::drop_index(const std::string &tab_name, const std::vector<std::s
 
 	//当前索引不存在
 	if (!tab_meta.is_index(col_names)) {
-		throw IndexNotFoundError(tab_name, col_names); 
+		throw IndexNotFoundError(tab_name, col_names);
 	}
 
 	//需要创建的索引
 	std::vector<ColMeta> index_cols;
-	for (auto col_name : col_names) {
-		auto col = tab_meta.get_col(col_name); 
-		index_cols.emplace_back(*col); 
+	for (auto col_name: col_names) {
+		auto col = tab_meta.get_col(col_name);
+		index_cols.emplace_back(*col);
 	}
 
-	auto index_name = ix_manager_->get_index_name(tab_name, index_cols); 
-	ix_manager_->close_index(ihs_.at(index_name).get()); 
-	ix_manager_->destroy_index(tab_name, index_cols); 
-	ihs_.erase(index_name); 
-	
+	auto index_name = ix_manager_->get_index_name(tab_name, index_cols);
+	buffer_pool_manager_->delete_all_pages(ihs_.at(index_name)->get_fd_());
+	ix_manager_->close_index(ihs_.at(index_name).get());
+	ix_manager_->destroy_index(tab_name, index_cols);
+	ihs_.erase(index_name);
+
 	//删除索引
-	auto indexes = tab_meta.get_index_meta(col_names); 
-	tab_meta.indexes.erase(indexes); 
+	auto indexes = tab_meta.get_index_meta(col_names);
+	tab_meta.indexes.erase(indexes);
 }
 
 /**
@@ -379,10 +404,112 @@ void SmManager::drop_index(const std::string &tab_name, const std::vector<std::s
  * @param {Context*} context
  */
 void SmManager::drop_index(const std::string &tab_name, const std::vector<ColMeta> &cols, Context *context) {
-	std::vector<std::string> col_names; 
-	for (auto col : cols) {
-		col_names.emplace_back(col.name); 
+	std::vector<std::string> col_names;
+	for (auto col: cols) {
+		col_names.emplace_back(col.name);
 	}
 
-	drop_index(tab_name, col_names, context); 
+	drop_index(tab_name, col_names, context);
+}
+
+void IxIndexHandle::ToGraph(const IxIndexHandle *ih, IxNodeHandle *node, BufferPoolManager *bpm, std::ofstream &out) {
+	std::string leaf_prefix("LEAF_");
+	std::string internal_prefix("INT_");
+	if (node->is_leaf_page()) {
+		IxNodeHandle *leaf = node;
+		// Print node name
+		out << leaf_prefix << leaf->get_page_no();
+		// Print node properties
+		out << "[shape=plain color=green ";
+		// Print data of the node
+		out << "label=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">\n";
+		// Print data
+		out << "<TR><TD COLSPAN=\"" << leaf->get_size() << "\">page_no=" << leaf->get_page_no() << "</TD></TR>\n";
+		out << "<TR><TD COLSPAN=\"" << leaf->get_size() << "\">"
+				<< "max_size=" << leaf->get_max_size() << ",min_size=" << leaf->get_min_size() << "</TD></TR>\n";
+		out << "<TR>";
+		for (int i = 0; i < leaf->get_size(); i++) {
+			out << "<TD>" << leaf->key_at(i) << "</TD>\n";
+		}
+		out << "</TR>";
+		// Print table end
+		out << "</TABLE>>];\n";
+		// Print Leaf node link if there is a next page
+		if (leaf->get_next_leaf() != INVALID_PAGE_ID && leaf->get_next_leaf() > 1) {
+			// 注意加上一个大于1的判断条件，否则若GetNextPageNo()是1，会把1那个结点也画出来
+			out << leaf_prefix << leaf->get_page_no() << " -> " << leaf_prefix << leaf->get_next_leaf() << ";\n";
+			out << "{rank=same " << leaf_prefix << leaf->get_page_no() << " " << leaf_prefix << leaf->get_next_leaf()
+					<< "};\n";
+		}
+
+		// Print parent links if there is a parent
+		if (leaf->get_parent_page_no() != INVALID_PAGE_ID) {
+			out << internal_prefix << leaf->get_parent_page_no() << ":p" << leaf->get_page_no() << " -> " << leaf_prefix
+					<< leaf->get_page_no() << ";\n";
+		}
+	} else {
+		IxNodeHandle *inner = node;
+		// Print node name
+		out << internal_prefix << inner->get_page_no();
+		// Print node properties
+		out << "[shape=plain color=pink ";// why not?
+		// Print data of the node
+		out << "label=<<TABLE BORDER=\"0\" CELLBORDER=\"1\" CELLSPACING=\"0\" CELLPADDING=\"4\">\n";
+		// Print data
+		out << "<TR><TD COLSPAN=\"" << inner->get_size() << "\">page_no=" << inner->get_page_no() << "</TD></TR>\n";
+		out << "<TR><TD COLSPAN=\"" << inner->get_size() << "\">"
+				<< "max_size=" << inner->get_max_size() << ",min_size=" << inner->get_min_size() << "</TD></TR>\n";
+		out << "<TR>";
+		for (int i = 0; i < inner->get_size(); i++) {
+			out << "<TD PORT=\"p" << inner->value_at(i) << "\">";
+			out << inner->key_at(i);
+			// if (inner->key_at(i) != 0) {  // 原判断条件是if (i > 0)
+			//     out << inner->key_at(i);
+			// } else {
+			//     out << " ";
+			// }
+			out << "</TD>\n";
+		}
+		out << "</TR>";
+		// Print table end
+		out << "</TABLE>>];\n";
+		// Print Parent link
+		if (inner->get_parent_page_no() != INVALID_PAGE_ID) {
+			out << internal_prefix << inner->get_parent_page_no() << ":p" << inner->get_page_no() << " -> "
+					<< internal_prefix << inner->get_page_no() << ";\n";
+		}
+		// Print leaves
+		for (int i = 0; i < inner->get_size(); i++) {
+			IxNodeHandle *child_node = ih->fetch_node(inner->value_at(i));
+			ToGraph(ih, child_node, bpm, out);// 继续递归
+			if (i > 0) {
+				IxNodeHandle *sibling_node = ih->fetch_node(inner->value_at(i - 1));
+				if (!sibling_node->is_leaf_page() && !child_node->is_leaf_page()) {
+					out << "{rank=same " << internal_prefix << sibling_node->get_page_no() << " " << internal_prefix
+							<< child_node->get_page_no() << "};\n";
+				}
+				bpm->unpin_page(sibling_node->get_page_id(), false);
+			}
+		}
+	}
+	bpm->unpin_page(node->get_page_id(), false);
+}
+
+void IxIndexHandle::Draw(BufferPoolManager *bpm, const std::string &outf) {
+	std::ofstream out(outf);
+	out << "digraph G {" << std::endl;
+	IxNodeHandle *node = fetch_node(file_hdr_->root_page_);
+	ToGraph(this, node, bpm, out);
+	out << "}" << std::endl;
+	out.close();
+
+	// 由dot文件生成png文件
+	std::string prefix = outf;
+	prefix.replace(outf.rfind(".dot"), 4, "");
+	std::string png_name = prefix + ".svg";
+	std::string cmd = "dot -Tsvg " + outf + " -o " + png_name;
+	system(cmd.c_str());
+
+	// printf("Generate picture: build/%s/%s\n", TEST_DB_NAME.c_str(), png_name.c_str());
+	printf("Generate picture: %s\n", png_name.c_str());
 }

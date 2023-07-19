@@ -11,9 +11,13 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include "errors.h"
+// #include "parser/ast.h"
+#include <bits/types/FILE.h>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 #include <map>
+#include <string>
 constexpr static int month_[] = {0, 31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31};
 
 
@@ -112,4 +116,129 @@ public:
 	virtual bool is_end() const = 0;
 
 	virtual Rid rid() const = 0;
+};
+
+enum AggregateDir {  //聚合函数的类型
+	Aggregate_COUNT,
+	Aggregate_MAX,
+	Aggregate_MIN,
+	Aggregate_SUM,
+};
+
+struct AggregateCmp {
+	int val_int; 
+	double val_double; 
+	std::string val_str; 
+	int sum_int;
+	double sum_double;  
+	int count; 
+	bool is_first; 
+	ColType col_type; 
+
+	AggregateCmp() :is_first(true) { }
+
+	std::string get_val(AggregateDir type) {
+		switch (type) {
+			case Aggregate_MIN: 
+			case Aggregate_MAX: {
+				if (col_type == TYPE_INT) {
+					return std::to_string(val_int); 
+				} else if (col_type == TYPE_FLOAT) {
+					return std::to_string(val_double); 
+				} else if (col_type == TYPE_STRING) {
+					return val_str; 
+				}
+			}
+			case Aggregate_SUM:
+				if (col_type == TYPE_INT) {
+					return std::to_string(sum_int);
+				} else if (col_type == TYPE_FLOAT) {
+					// std::ostringstream oss; 
+					// oss << std::setprecision(6) << sum_double; 
+					// return oss.str(); 
+					return std::to_string(sum_double); 
+				}
+			case Aggregate_COUNT:
+				return std::to_string(count);
+			default:
+				throw AggregateError("AggregateDir Error"); 
+		}
+		return "2"; 
+	}
+
+	void update(int val, AggregateDir type) {
+		if (is_first) {
+			sum_int = val, count = 1; 
+			val_int = val;
+			is_first = false; 
+			col_type = TYPE_INT; 
+		} else {
+			switch (type) {
+				case Aggregate_MAX: 
+					val_int = std::max(val_int, val);
+					break; 
+				case Aggregate_MIN:
+					val_int = std::min(val_int, val); 
+					break; 
+				case Aggregate_SUM:
+					sum_int += val;
+					break; 
+				case Aggregate_COUNT:
+					count ++; 
+					break; 
+				default:
+					throw AggregateError("AggregateDir Error"); 
+			}
+		}
+	}
+	void update(double val, AggregateDir type) {
+		if (is_first) {
+			sum_double = val, count = 1; 
+			val_double = val; 
+			is_first = false; 
+			col_type = TYPE_FLOAT; 
+		} else {
+			switch (type) {
+				case Aggregate_MAX: 
+					val_double = std::max(val_double, val);
+					break; 
+				case Aggregate_MIN:
+					val_double = std::min(val_double, val); 
+					break; 
+				case Aggregate_SUM:
+					sum_double += val;
+					break; 
+				case Aggregate_COUNT:
+					count ++; 
+					break; 
+				default:
+					throw AggregateError("AggregateDir Error"); 
+			}
+		}
+	}
+	void update(std::string val, AggregateDir type) {
+		if (is_first) {
+			count = 1; 
+			val_str = val; 
+			is_first = false; 
+			col_type = TYPE_STRING; 
+		} else {
+			switch (type) {
+				case Aggregate_MAX: 
+					val_str = std::max(val_str, val);
+					break; 
+				case Aggregate_MIN:
+					val_str = std::min(val_str, val); 
+					break; 
+				case Aggregate_SUM:
+					/** do nothing*/
+					break; 
+				case Aggregate_COUNT:
+					count ++; 
+					break; 
+				default:
+					throw AggregateError("AggregateDir Error"); 
+			}
+		}
+	}
 };

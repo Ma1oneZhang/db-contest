@@ -13,6 +13,7 @@ See the Mulan PSL v2 for more details. */
 #include <memory>
 #include <utility>
 
+#include "analyze/analyze.h"
 #include "execution/executor_delete.h"
 #include "execution/executor_index_scan.h"
 #include "execution/executor_insert.h"
@@ -22,18 +23,57 @@ See the Mulan PSL v2 for more details. */
 #include "execution/executor_update.h"
 #include "index/ix.h"
 #include "optimizer/plan.h"
+#include "parser/ast.h"
 #include "record_printer.h"
 
 // 目前的索引匹配规则为：完全匹配索引字段，且全部为单点查询，不会自动调整where条件的顺序
 bool Planner::get_index_cols(std::string tab_name, std::vector<Condition> curr_conds, std::vector<std::string> &index_col_names) {
 	index_col_names.clear();
-	for (auto &cond: curr_conds) {
-		if (cond.is_rhs_val && cond.op == OP_EQ && cond.lhs_col.tab_name.compare(tab_name) == 0)
-			index_col_names.push_back(cond.lhs_col.col_name);
+	auto &index_meta = sm_manager_->db_.get_table(tab_name).indexes;
+	std::vector<std::string> indexed_col;
+	int maxlen = -1;
+	for (auto &meta: index_meta) {
+		for (auto index_detail: meta.cols) {
+			indexed_col.push_back(index_detail.name);
+		}
+		// 最左匹配要求前面全是equal，最后一个可以是大于小于或range(x > 1 && x < 10)
+		std::vector<std::vector<bool>> status(3, std::vector<bool>(indexed_col.size(), false));
+		int match_len = 0;
+		for (size_t i = 0; i < curr_conds.size(); i++) {
+			auto &cond = curr_conds[i];
+			auto pos = std::find(indexed_col.begin(), indexed_col.end(), cond.lhs_col.col_name) - indexed_col.begin();
+			if (cond.is_rhs_val && cond.op != OP_NE) {
+				if (pos == 0 || status[1][pos - 1] || status[0][pos] || status[2][pos]) {
+					// do nothing
+					switch (cond.op) {
+						case OP_EQ:
+							status[1][pos] = true;
+							break;
+						case OP_NE:
+							// never reach
+							break;
+						case OP_LT:
+						case OP_LE:
+							status[2][pos] = true;
+							break;
+						case OP_GT:
+						case OP_GE:
+							status[0][pos] = true;
+							break;
+					}
+				} else {
+					break;
+				}
+				match_len = i;
+			}
+		}
+		if (match_len > maxlen) {
+			maxlen = match_len;
+			index_col_names = std::move(indexed_col);
+		}
+		indexed_col.clear();
 	}
-	TabMeta &tab = sm_manager_->db_.get_table(tab_name);
-	if (tab.is_index(index_col_names)) return true;
-	return false;
+	return index_col_names.size() > 0;
 }
 
 /**
@@ -246,23 +286,46 @@ std::shared_ptr<Plan> Planner::make_one_rel(std::shared_ptr<Query> query) {
 
 std::shared_ptr<Plan> Planner::generate_sort_plan(std::shared_ptr<Query> query, std::shared_ptr<Plan> plan) {
 	auto x = std::dynamic_pointer_cast<ast::SelectStmt>(query->parse);
+	// return plan; 
 	if (!x->has_sort) {
 		return plan;
 	}
-	std::vector<std::string> tables = query->tables;
+	std::vector<std::string> tables = query->tables; //所有查询的表名
 	std::vector<ColMeta> all_cols;
 	for (auto &sel_tab_name: tables) {
 		// 这里db_不能写成get_db(), 注意要传指针
 		const auto &sel_tab_cols = sm_manager_->db_.get_table(sel_tab_name).cols;
 		all_cols.insert(all_cols.end(), sel_tab_cols.begin(), sel_tab_cols.end());
 	}
-	TabCol sel_col;
-	for (auto &col: all_cols) {
-		if (col.name.compare(x->order->cols->col_name) == 0)
-			sel_col = {.tab_name = col.tab_name, .col_name = col.name};
+
+	//获取所有需要排序的列表
+	TabCol sel_col; 
+	std::vector<ColMeta> order_cols; 		//需要排序的列
+	std::vector<ast::OrderByDir> order_bys; //排序的方式
+	std::vector<size_t> order_idx; 			//排序的下表
+	auto &orders = x->orders; 
+	for (auto &order : orders) {
+		for (auto col : order->cols) {
+			// for (auto colmeta : all_cols) {
+			for (size_t i = 0; i < all_cols.size(); i ++ ) {
+				auto &colmeta = all_cols[i]; 
+				if (colmeta.name.compare(col->col_name) == 0 && (col->tab_name == "" || col->tab_name == colmeta.tab_name)) {
+					order_cols.push_back(colmeta); 
+					order_idx.push_back(i); 
+					order_bys.push_back(order->orderby_dir); 
+				}
+			}
+		}
 	}
-	return std::make_shared<SortPlan>(T_Sort, std::move(plan), sel_col,
-																		x->order->orderby_dir == ast::OrderBy_DESC);
+
+	return std::make_shared<SortPlan>(T_Sort, 
+									std::move(sm_manager_),
+									std::move(tables),
+									std::move(plan), 
+									std::move(all_cols), 
+									std::move(order_idx),
+									std::move(order_bys), 
+									std::move(x->limit));
 }
 
 

@@ -11,6 +11,7 @@ See the Mulan PSL v2 for more details. */
 #include "defs.h"
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 enum JoinType {
@@ -39,10 +40,12 @@ namespace ast {
 	};
 
 	enum OrderByDir {
-		OrderBy_DEFAULT,
-		OrderBy_ASC,
-		OrderBy_DESC
+		OrderBy_DEFAULT,  //默认升序
+		OrderBy_ASC,	  //升序
+		OrderBy_DESC	  //降序
 	};
+
+
 
 	// Base class for tree nodes
 	struct TreeNode {
@@ -185,9 +188,24 @@ namespace ast {
 	};
 
 	struct OrderBy : public TreeNode {
-		std::shared_ptr<Col> cols;
+		std::vector<std::shared_ptr<Col>> cols;
 		OrderByDir orderby_dir;
-		OrderBy(std::shared_ptr<Col> cols_, OrderByDir orderby_dir_) : cols(std::move(cols_)), orderby_dir(std::move(orderby_dir_)) {}
+		OrderBy(std::vector<std::shared_ptr<Col>> cols_, OrderByDir orderby_dir_) : cols(std::move(cols_)), orderby_dir(std::move(orderby_dir_)) {}
+	};
+
+	struct Limit : public TreeNode {
+		size_t limit_size; 
+		Limit(size_t limit_size_) : limit_size(limit_size_) {}
+	};
+
+	struct Aggregate : public TreeNode {
+		std::vector<std::shared_ptr<Col>> cols; 
+		AggregateDir aggregate_dir; 	//聚合类型
+		std::shared_ptr<Col> col_alias; //AS的别名
+
+		Aggregate(std::vector<std::shared_ptr<Col>> cols_,
+					AggregateDir aggregate_dir_,
+					std::shared_ptr<Col> col_alias_) : cols(std::move(cols_)), aggregate_dir(std::move(aggregate_dir_)), col_alias(std::move(col_alias_)) {}
 	};
 
 	struct InsertStmt : public TreeNode {
@@ -230,17 +248,31 @@ namespace ast {
 		std::vector<std::shared_ptr<BinaryExpr>> conds;
 		std::vector<std::shared_ptr<JoinExpr>> jointree;
 
-
 		bool has_sort;
-		std::shared_ptr<OrderBy> order;
+		std::vector<std::shared_ptr<OrderBy>> orders;
+
+		bool has_aggregate; 
+		std::vector<std::shared_ptr<Aggregate>> aggregates; //聚合函数
+
+		bool has_limit; 
+		std::shared_ptr<Limit> limit; 
+
 
 
 		SelectStmt(std::vector<std::shared_ptr<Col>> cols_,
 							 std::vector<std::string> tabs_,
 							 std::vector<std::shared_ptr<BinaryExpr>> conds_,
-							 std::shared_ptr<OrderBy> order_) : cols(std::move(cols_)), tabs(std::move(tabs_)), conds(std::move(conds_)),
-																									order(std::move(order_)) {
-			has_sort = (bool) order;
+							 std::vector<std::shared_ptr<OrderBy>> orders_,
+							 std::vector<std::shared_ptr<Aggregate>> aggregates_,
+							 std::shared_ptr<Limit> limit_) : cols(std::move(cols_)), 
+							 															tabs(std::move(tabs_)), 
+																						conds(std::move(conds_)),
+																						orders(std::move(orders_)), 
+																						aggregates(std::move(aggregates_)),
+																						limit(std::move(limit_)) {
+			has_sort = (bool) orders.size();
+			has_aggregate = (bool) aggregates.size();  //判断是否有聚合函数
+			has_limit = (bool) limit; 
 		}
 	};
 
@@ -251,6 +283,7 @@ namespace ast {
 		std::string sv_str;
 		int64_t sv_bigint;
 		OrderByDir sv_orderby_dir;
+		AggregateDir sv_aggregate_dir;
 		std::vector<std::string> sv_strs;
 
 		std::shared_ptr<TreeNode> sv_node;
@@ -277,6 +310,11 @@ namespace ast {
 		std::vector<std::shared_ptr<BinaryExpr>> sv_conds;
 
 		std::shared_ptr<OrderBy> sv_orderby;
+		std::vector<std::shared_ptr<OrderBy>> sv_orderbys; 
+		std::shared_ptr<Limit> sv_limit; 
+
+		std::shared_ptr<Aggregate> sv_aggregate; 
+		std::vector<std::shared_ptr<Aggregate>> sv_aggregates; 
 	};
 
 	extern std::shared_ptr<ast::TreeNode> parse_tree;

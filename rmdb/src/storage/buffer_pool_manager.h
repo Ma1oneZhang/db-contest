@@ -75,6 +75,10 @@ public:
 	void flush_all_pages(int fd);
 
 	void delete_all_pages(int fd);
+
+	// for debug
+	bool check_unpin();
+
 private:
 	bool find_victim_page(frame_id_t *frame_id);
 

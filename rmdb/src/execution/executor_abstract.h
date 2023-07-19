@@ -41,6 +41,8 @@ public:
 
 	virtual ColMeta get_col_offset(const TabCol &target) { return ColMeta(); };
 
+	virtual std::unique_ptr<RmRecord> getRmRecord() { return nullptr; }; 
+
 	std::vector<ColMeta>::const_iterator get_col(const std::vector<ColMeta> &rec_cols, const TabCol &target) {
 		assert(rec_cols.size());
 		auto pos = std::find_if(rec_cols.begin(), rec_cols.end(), [&](const ColMeta &col) {

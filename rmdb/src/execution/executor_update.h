@@ -16,9 +16,12 @@ See the Mulan PSL v2 for more details. */
 #include "execution_manager.h"
 #include "executor_abstract.h"
 #include "index/ix.h"
+#include "record/rm_defs.h"
 #include "system/sm.h"
 #include <cstring>
+#include <memory>
 #include <stdexcept>
+#include <unordered_map>
 
 class UpdateExecutor : public AbstractExecutor {
 private:
@@ -155,10 +158,15 @@ public:
 	}
 	std::unique_ptr<RmRecord> Next() override {
 		// scan all table
+		std::vector<Rid> rids;
+		std::vector<std::unique_ptr<RmRecord>> original_records_;
+		std::vector<std::unique_ptr<RmRecord>> updated_records_;
 		for (auto scan = std::make_unique<RmScan>(fh_); !scan->is_end(); scan->next()) {
 			auto rec = fh_->get_record(scan->rid(), nullptr);
-			// check singal record
+			// check every record
 			if (checkCondition(rec)) {
+				auto original_rec = std::make_unique<RmRecord>(*rec);
+				original_records_.emplace_back(std::move(original_rec));
 				// make set_clause apply on it
 				for (auto set_clause: set_clauses_) {
 					auto col = tab_.get_col(set_clause.lhs.col_name);
@@ -217,8 +225,96 @@ public:
 						}
 					}
 				}
-				fh_->insert_record(scan->rid(), rec->data);
+				updated_records_.emplace_back(std::move(rec));
+				rids.push_back(scan->rid());
 			}
+		}
+		if (tab_.indexes.size() > 0) {
+			// means need unique check
+			std::unordered_set<std::string> vailated_records;
+			for (auto &updated_rec: updated_records_) {
+				for (size_t i = 0; i < tab_.indexes.size(); ++i) {
+					auto &index = tab_.indexes[i];
+					std::unique_ptr<RmRecord> key = std::make_unique<RmRecord>(index.col_tot_len);
+					int offset = 0;
+					for (size_t i = 0; i < index.col_num; ++i) {
+						memcpy(key->data + offset, updated_rec->data + index.cols[i].offset, index.cols[i].len);
+						offset += index.cols[i].len;
+					}
+					auto bin_data = std::string(key->data, key->size);
+					if (vailated_records.count(bin_data))
+						throw DuplicateKeyError("update key duplicate");
+					vailated_records.insert(bin_data);
+				}
+			}
+			vailated_records.clear();
+			// delete entry of index
+			for (auto &original_rec: original_records_) {
+				for (size_t i = 0; i < tab_.indexes.size(); ++i) {
+					auto &index = tab_.indexes[i];
+					auto ih = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name_, index.cols)).get();
+					std::unique_ptr<RmRecord> key = std::make_unique<RmRecord>(index.col_tot_len);
+					int offset = 0;
+					for (size_t i = 0; i < index.col_num; ++i) {
+						memcpy(key->data + offset, original_rec->data + index.cols[i].offset, index.cols[i].len);
+						offset += index.cols[i].len;
+					}
+					ih->delete_entry(key->data, context_->txn_);
+				}
+			}
+			// check if in the index.
+			for (auto &rec: updated_records_) {
+				for (size_t i = 0; i < tab_.indexes.size(); ++i) {
+					auto &index = tab_.indexes[i];
+					auto ih = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name_, index.cols)).get();
+					std::unique_ptr<RmRecord> key = std::make_unique<RmRecord>(index.col_tot_len);
+					int offset = 0;
+					for (size_t i = 0; i < index.col_num; ++i) {
+						memcpy(key->data + offset, rec->data + index.cols[i].offset, index.cols[i].len);
+						offset += index.cols[i].len;
+					}
+					std::vector<Rid> res;
+					ih->get_value(key->data, &res, context_->txn_);
+					if (res.size() != 0) {
+						// insert original record back to index
+						for (size_t j = 0; j < original_records_.size(); j++) {
+							const auto &original_rec = original_records_[j];
+							const auto &rid = rids[j];
+							for (size_t i = 0; i < tab_.indexes.size(); ++i) {
+								auto &index = tab_.indexes[i];
+								auto ih = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name_, index.cols)).get();
+								std::unique_ptr<RmRecord> key = std::make_unique<RmRecord>(index.col_tot_len);
+								int offset = 0;
+								for (size_t i = 0; i < index.col_num; ++i) {
+									memcpy(key->data + offset, original_rec->data + index.cols[i].offset, index.cols[i].len);
+									offset += index.cols[i].len;
+								}
+								ih->insert_entry(key->data, rid, context_->txn_);
+							}
+						}
+						throw DuplicateKeyError("update key duplicate");
+					}
+				}
+			}
+			// insert updated record to the index
+			for (size_t i = 0; i < updated_records_.size(); ++i) {
+				const auto &rec = updated_records_[i];
+				const auto &rid = rids[i];
+				for (size_t i = 0; i < tab_.indexes.size(); ++i) {
+					auto &index = tab_.indexes[i];
+					auto ih = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name_, index.cols)).get();
+					std::unique_ptr<RmRecord> key = std::make_unique<RmRecord>(index.col_tot_len);
+					int offset = 0;
+					for (size_t i = 0; i < index.col_num; ++i) {
+						memcpy(key->data + offset, rec->data + index.cols[i].offset, index.cols[i].len);
+						offset += index.cols[i].len;
+					}
+					ih->insert_entry(key->data, rid, context_->txn_);
+				}
+			}
+		}
+		for (size_t i = 0; i < updated_records_.size(); i++) {
+			fh_->insert_record(rids[i], updated_records_[i]->data);
 		}
 		is_executed = true;
 		return nullptr;

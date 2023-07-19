@@ -27,16 +27,6 @@ inline int ix_compare(const lhs *a, const rhs *b, ColType type, int col_len) {
 		case TYPE_FLOAT:
 		case TYPE_BIGINT:
 			return (*a < *b) ? -1 : ((*a > *b) ? 1 : 0);
-			// 	{
-			// 	int ia = *(int *) a;
-			// 	int ib = *(int *) b;
-			// 	return (ia < ib) ? -1 : ((ia > ib) ? 1 : 0);
-			// }
-			//  {
-			// 	double fa = *(double *) a;
-			// 	double fb = *(double *) b;
-			// 	return (fa < fb) ? -1 : ((fa > fb) ? 1 : 0);
-			// string like datatype
 		case TYPE_STRING:
 		case TYPE_DATETIME:
 			return memcmp(a, b, col_len);
@@ -48,7 +38,16 @@ inline int ix_compare(const lhs *a, const rhs *b, ColType type, int col_len) {
 inline int ix_compare(const char *a, const char *b, const std::vector<ColType> &col_types, const std::vector<int> &col_lens) {
 	int offset = 0;
 	for (size_t i = 0; i < col_types.size(); ++i) {
-		int res = ix_compare(a + offset, b + offset, col_types[i], col_lens[i]);
+		int res;
+		if (col_types[i] == TYPE_INT) {
+			res = ix_compare(reinterpret_cast<const int *>(a + offset), reinterpret_cast<const int *>(b + offset), col_types[i], col_lens[i]);
+		} else if (col_types[i] == TYPE_FLOAT) {
+			res = ix_compare(reinterpret_cast<const double *>(a + offset), reinterpret_cast<const double *>(b + offset), col_types[i], col_lens[i]);
+		} else if (col_types[i] == TYPE_BIGINT) {
+			res = ix_compare(reinterpret_cast<const int64_t *>(a + offset), reinterpret_cast<const int64_t *>(b + offset), col_types[i], col_lens[i]);
+		} else {
+			res = ix_compare(a + offset, b + offset, col_types[i], col_lens[i]);
+		}
 		if (res != 0) return res;
 		offset += col_lens[i];
 	}
@@ -76,7 +75,7 @@ public:
 		rids = reinterpret_cast<Rid *>(keys + file_hdr->keys_size_);
 	}
 
-	int get_size() { return page_hdr->num_key; }
+	int get_size() const { return page_hdr->num_key; }
 
 	void set_size(int size) { page_hdr->num_key = size; }
 
@@ -179,8 +178,11 @@ private:
 	std::mutex root_latch_;
 
 public:
+	int get_fd_() const { return fd_; }
 	IxIndexHandle(DiskManager *disk_manager, BufferPoolManager *buffer_pool_manager, int fd);
-
+	// for debug only
+	void Draw(BufferPoolManager *bpm, const std::string &outf);
+	void ToGraph(const IxIndexHandle *ih, IxNodeHandle *node, BufferPoolManager *bpm, std::ofstream &out);
 	// for search
 	bool get_value(const char *key, std::vector<Rid> *result, Transaction *transaction);
 
@@ -213,6 +215,10 @@ public:
 	Iid leaf_end() const;
 
 	Iid leaf_begin() const;
+
+	size_t get_idx_len() const {
+		return file_hdr_->col_tot_len_;
+	}
 
 private:
 	// 辅助函数

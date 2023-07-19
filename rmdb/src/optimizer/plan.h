@@ -109,16 +109,30 @@ public:
 
 class SortPlan : public Plan {
 public:
-	SortPlan(PlanTag tag, std::shared_ptr<Plan> subplan, TabCol sel_col, bool is_desc) {
+	SortPlan(PlanTag tag, 
+						SmManager *sm_manager,
+						std::vector<std::string> tables,
+						std::shared_ptr<Plan> subplan, 
+						std::vector<ColMeta> cols_, 
+						std::vector<size_t> order_idx_,
+						std::vector<ast::OrderByDir> order_bys_, 
+						std::shared_ptr<ast::Limit> limit_) {
 		Plan::tag = tag;
 		subplan_ = std::move(subplan);
-		sel_col_ = sel_col;
-		is_desc_ = is_desc;
+		order_idx = std::move(order_idx_); 
+		order_bys = std::move(order_bys_); 
+		cols = std::move(cols_); 
+		limit = std::move(limit_); 
+		fh = sm_manager->fhs_.at(tables.front()).get();
 	}
 	~SortPlan() {}
 	std::shared_ptr<Plan> subplan_;
-	TabCol sel_col_;
-	bool is_desc_;
+	std::vector<ColMeta> cols; 
+	RmFileHandle *fh;
+	std::vector<size_t> order_idx; 
+	std::vector<ast::OrderByDir> order_bys; 
+	bool has_limit; 
+	std::shared_ptr<ast::Limit> limit;
 };
 
 // dml语句，包括insert; delete; update; select语句　

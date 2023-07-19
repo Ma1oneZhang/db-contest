@@ -219,7 +219,7 @@ void BufferPoolManager::delete_all_pages(int fd) {
 		if (fd == pages_[i].get_page_id().fd && INVALID_PAGE_ID != pages_[i].get_page_id().page_no) {
 			Page *page = &pages_[i];
 			// write back
-			disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
+			// disk_manager_->write_page(page->get_page_id().fd, page->get_page_id().page_no, page->get_data(), PAGE_SIZE);
 			// remove from page_table
 			page_table_.Erase(page->get_page_id());
 			// reset
@@ -231,4 +231,23 @@ void BufferPoolManager::delete_all_pages(int fd) {
 			replacer_->unpin(i);
 		}
 	}
+}
+
+/**
+ * @description: 查看所有page是否unpin(DEBUG ONLY)
+ * @return {bool}
+ */
+bool BufferPoolManager::check_unpin() {
+	std::scoped_lock lock{latch_};
+	for (size_t i = 2; i < pool_size_; i++) {
+		if (pages_[i].pin_count_ != 0) {
+			if (pages_[i].pin_count_ < 0) {
+				LOG_INFO("%zu, DOUBLE UNPIN", i)
+			} else {
+				LOG_INFO("%zu, THERE IS PINING PAGE", i);
+			}
+			return false;
+		}
+	}
+	return true;
 }
