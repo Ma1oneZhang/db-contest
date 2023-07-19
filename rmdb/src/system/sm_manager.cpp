@@ -311,8 +311,8 @@ void SmManager::create_index(const std::string &tab_name, const std::vector<std:
 	std::vector<ColMeta> index_cols;
 	size_t col_tot_len = 0;
 	for (auto col_name: col_names) {
-		col_tot_len += col_name.size();
 		auto col = tab_meta.get_col(col_name);
+		col_tot_len += col->len;
 		index_cols.emplace_back(*col);
 	}
 
@@ -321,10 +321,9 @@ void SmManager::create_index(const std::string &tab_name, const std::vector<std:
 	}
 	auto index_name_ = ix_manager_->get_index_name(tab_name, index_cols);
 	auto ih = ix_manager_->open_index(tab_name, index_cols);
-	int cnt = 0;
 	auto file_handle = fhs_.at(tab_name).get();
-	std::unordered_set<std::string> exist;
 	// check the duplicate
+	std::unordered_set<std::string> vaildate_set;
 	for (RmScan rm_scan(file_handle); !rm_scan.is_end(); rm_scan.next()) {
 		auto rec = file_handle->get_record(rm_scan.rid(), context);
 		auto index_rec = std::make_unique<RmRecord>(col_tot_len);
@@ -333,12 +332,20 @@ void SmManager::create_index(const std::string &tab_name, const std::vector<std:
 			memcpy(index_rec->data + tot_offset, rec->data + col.offset, col.len);
 			tot_offset += col.len;
 		}
-		auto rec_bin = std::string(index_rec->data, col_tot_len);
-		if (exist.count(rec_bin)) {
-			drop_index(tab_name, col_names, context);
-			throw DuplicateKeyError("insert key duplicate");
+		auto bin_data = std::string(index_rec->data, col_tot_len);
+		if (vaildate_set.count(bin_data)) {
+			throw DuplicateKeyError("update key duplicate");
 		}
-		exist.insert(rec_bin);
+		vaildate_set.insert(bin_data);
+	}
+	for (RmScan rm_scan(file_handle); !rm_scan.is_end(); rm_scan.next()) {
+		auto rec = file_handle->get_record(rm_scan.rid(), context);
+		auto index_rec = std::make_unique<RmRecord>(col_tot_len);
+		int tot_offset = 0;
+		for (auto &col: index_cols) {
+			memcpy(index_rec->data + tot_offset, rec->data + col.offset, col.len);
+			tot_offset += col.len;
+		}
 		ih->insert_entry(index_rec->data, rm_scan.rid(), context->txn_);
 	}
 	// ih->Draw(buffer_pool_manager_, "after_insert_3000_element.dot");

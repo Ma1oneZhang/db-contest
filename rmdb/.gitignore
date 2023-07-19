@@ -7,3 +7,4 @@ deps/googletest
 ./deps/googletest
 compile_commands.json
 /test
+perf.data

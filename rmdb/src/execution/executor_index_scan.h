@@ -485,8 +485,7 @@ public:
 	}
 
 	std::unique_ptr<RmRecord> Next() override {
-		auto rec = fh_->get_record(rid_, nullptr);
-		return rec;
+		return fh_->get_record(rid_, nullptr);
 	}
 
 	Rid &rid() override { return rid_; }
