@@ -42,7 +42,7 @@ BIGINT DATETIME COUNT MAX MIN SUM AS
 %type <sv_expr> expr
 %type <sv_val> value
 %type <sv_vals> valueList
-%type <sv_str> tbName colName
+%type <sv_str> tbName colName LIMIT
 %type <sv_strs> tableList colNameList
 %type <sv_col> col alias_aggregate
 %type <sv_cols> colList selector
@@ -50,8 +50,10 @@ BIGINT DATETIME COUNT MAX MIN SUM AS
 %type <sv_set_clauses> setClauses
 %type <sv_cond> condition
 %type <sv_conds> whereClause optWhereClause
-%type <sv_orderby>  order_clause opt_order_clause
+%type <sv_orderby>  order_clause 
+%type <sv_orderbys> order_clauses opt_order_clause
 %type <sv_orderby_dir> opt_asc_desc
+%type <sv_limit> opt_limit
 %type <sv_aggregate_dir> opt_aggregate
 %type <sv_aggregate> aggregate
 %type <sv_aggregates> aggregates
@@ -154,9 +156,9 @@ dml:
     {
         $$ = std::make_shared<UpdateStmt>($2, $4, $5);
     }
-    |   SELECT aggregates selector FROM tableList optWhereClause opt_order_clause
+    |   SELECT aggregates selector FROM tableList optWhereClause opt_order_clause opt_limit
     {
-        $$ = std::make_shared<SelectStmt>($3, $5, $6, $7, $2);
+        $$ = std::make_shared<SelectStmt>($3, $5, $6, $7, $2, $8);
     }
     ;
 
@@ -363,7 +365,7 @@ setClause:
     ;
 
 aggregates: 
-    aggregate
+        aggregate
     {
         $$ = std::vector<std::shared_ptr<Aggregate>>{$1}; 
     }
@@ -442,17 +444,28 @@ tableList:
     ;
 
 opt_order_clause:
-    ORDER BY order_clause      
+    ORDER BY order_clauses
     { 
         $$ = $3; 
     }
     |   /* epsilon */ { /* ignore*/ }
     ;
 
+order_clauses:
+        order_clause
+    {
+        $$ = std::vector<std::shared_ptr<ast::OrderBy>>{$1}; 
+    }
+    |   order_clauses ',' order_clause
+    {
+        $$.push_back($3); 
+    }
+    ;
+    
 order_clause:
-        col  opt_asc_desc 
+        colList  opt_asc_desc 
     { 
-        $$ = std::make_shared<OrderBy>($1, $2);
+        $$ = std::make_shared<ast::OrderBy>($1, $2);
     }
     ;   
 
@@ -471,7 +484,16 @@ opt_asc_desc:
     }
     ;    
 
+
+opt_limit:
+        LIMIT VALUE_INT
+    {
+        $$ = std::make_shared<Limit>($2); 
+    }
+    |   {/* none */} 
+
 tbName: IDENTIFIER;
+LIMIT: IDENTIFIER;
 
 colName: IDENTIFIER;
 %%
