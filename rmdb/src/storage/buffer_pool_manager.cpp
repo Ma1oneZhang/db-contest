@@ -226,7 +226,7 @@ void BufferPoolManager::delete_all_pages(int fd) {
 			page->is_dirty_ = false;
 			page->id_ = {-1, -1};
 			page->pin_count_ = 0;
-			// page->reset_memory();
+			page->reset_memory();
 			// add to free list
 			replacer_->unpin(i);
 		}

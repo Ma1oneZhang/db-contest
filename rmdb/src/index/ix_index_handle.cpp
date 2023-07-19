@@ -173,9 +173,14 @@ void IxNodeHandle::erase_pair(int pos) {
 	// 2. 删除该位置的rid
 	// 3. 更新结点的键值对数量
 
-	// move data backward to cover old data
-	std::move(get_key(pos + 1), get_key(get_size()), get_key(pos));
-	std::move(get_rid(pos + 1), get_rid(get_size()), get_rid(pos));
+	if (pos + 1 == get_size()) {
+		memset(get_key(pos), 0, file_hdr->col_tot_len_);
+		memset(get_rid(pos), 0, sizeof(Rid));
+	} else {
+		// move data backward to cover old data
+		std::move(get_key(pos + 1), get_key(get_size()), get_key(pos));
+		std::move(get_rid(pos + 1), get_rid(get_size()), get_rid(pos));
+	}
 	// decrease the num of key
 	page_hdr->num_key--;
 }
