@@ -46,8 +46,8 @@ public:
 	void rollback_delete(const std::string &tab_name_, const Rid &rid, const RmRecord &rec, Transaction *txn);
 	void rollback_update(const std::string &tab_name, const Rid &rid, const RmRecord &record, Transaction *txn);
 
-	inline txn_id_t get_next_txn_id() { return ++next_txn_id_; }
-	inline txn_id_t get_next_time_stamp() { return ++next_timestamp_; }
+	inline txn_id_t get_next_txn_id() { return next_txn_id_; }
+	inline txn_id_t get_next_time_stamp() { return next_timestamp_; }
 	/**
      * @description: 获取事务ID为txn_id的事务对象
      * @return {Transaction*} 事务对象的指针

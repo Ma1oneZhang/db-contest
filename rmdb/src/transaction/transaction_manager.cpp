@@ -29,9 +29,9 @@ Transaction *TransactionManager::begin(Transaction *txn, LogManager *log_manager
 	// 4. 返回当前事务指针
 	if (txn != nullptr)
 		return txn;
-	auto txn_id = get_next_txn_id();
+	auto txn_id = next_txn_id_ ++ ;
 	auto new_txn = new Transaction(txn_id);
-	new_txn->set_start_ts(get_next_time_stamp());
+	new_txn->set_start_ts(next_timestamp_ ++ );
 	txn_map[txn_id] = new_txn;
 	return new_txn;
 }

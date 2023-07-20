@@ -141,7 +141,7 @@ void Test::exec_sql(const std::string &sql) {
 	// 开启事务，初始化系统所需的上下文信息（包括事务对象指针、锁管理器指针、日志管理器指针、存放结果的buffer、记录结果长度的变量）
 	Context *context = new Context(lock_manager.get(), log_manager.get(),
 																nullptr, result, &offset);
-	// SetTransaction(&txn_id, context);
+	SetTransaction(&txn_id, context);
 
 	// 用于判断是否已经调用了yy_delete_buffer来删除buf
 	bool finish_analyze = false;
@@ -227,3 +227,59 @@ TEST_F(Test, ONE) {
 }
 
 // 要增加测试, 直接在下面加 TEST_F
+TEST_F(Test, BeginTest) {
+    Transaction *txn = nullptr;
+    txn = txn_manager->begin(txn, log_manager.get());
+
+    EXPECT_EQ(txn_manager->txn_map.size(), 1);
+    EXPECT_NE(txn, nullptr);
+    EXPECT_EQ(txn->get_state(), TransactionState::DEFAULT);
+}
+
+// test commit
+TEST_F(Test, CommitTest) {
+    exec_sql("create table t1 (num int);");
+    exec_sql("begin;");
+    exec_sql("insert into t1 values(1);");
+    exec_sql("insert into t1 values(2);");
+    exec_sql("insert into t1 values(3);");
+    exec_sql("update t1 set num = 4 where num = 1;");
+    exec_sql("delete from t1 where num = 3;");
+    exec_sql("commit;");
+    exec_sql("select * from t1;");
+    const char *str = "+------------------+\n"
+        "|              num |\n"
+        "+------------------+\n"
+        "|                4 |\n"
+        "|                2 |\n"
+        "+------------------+\n"
+        "Total record(s): 2\n";
+    EXPECT_STREQ(result, str);
+    // there should be 3 transactions
+    EXPECT_EQ(txn_manager->get_next_txn_id(), 3);
+    Transaction *txn = txn_manager->get_transaction(1);
+    EXPECT_EQ(txn->get_state(), TransactionState::COMMITTED);
+}
+
+// test abort
+TEST_F(Test, AbortTest) {
+    exec_sql("create table t1 (num int);");
+    exec_sql("begin;");
+    exec_sql("insert into t1 values(1);");
+    exec_sql("insert into t1 values(2);");
+    exec_sql("insert into t1 values(3);");
+    exec_sql("update t1 set num = 4 where num = 1;");
+    exec_sql("delete from t1 where num = 3;");
+    exec_sql("abort;");
+    exec_sql("select * from t1;");
+    const char * str = "+------------------+\n"
+        "|              num |\n"
+        "+------------------+\n"
+        "+------------------+\n"
+        "Total record(s): 0\n";
+    EXPECT_STREQ(result, str);
+    EXPECT_EQ(txn_manager->get_next_txn_id(), 3);
+    Transaction *txn = txn_manager->get_transaction(1);
+    EXPECT_EQ(txn->get_state(), TransactionState::ABORTED);
+}
+
