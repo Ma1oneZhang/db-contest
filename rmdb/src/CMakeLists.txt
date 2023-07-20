@@ -24,3 +24,6 @@ target_link_libraries(rmdb parser execution readline pthread planner analyze)
 # unit_test
 add_executable(unit_test unit_test.cpp)
 target_link_libraries(unit_test storage lru_replacer record gtest_main)  # add gtest
+
+add_executable(sql_test sql_test.cpp)
+target_link_libraries(sql_test parser execution readline pthread planner analyze gtest_main)  # add gtest
