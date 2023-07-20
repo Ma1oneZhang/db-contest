@@ -14,6 +14,24 @@
       ],
       "cwd": "${workspaceFolder}/build",
       "preLaunchTask": "Build"
-    }
+    },
+    { //测试使用的, 有编译
+    "type": "lldb",
+    "request": "launch",
+    "name": "TestWithCompile",
+    "program": "${workspaceFolder}/build/bin/sql_test",
+    "args": [],
+    "cwd": "${workspaceFolder}/build",
+    "preLaunchTask": "TestWithCompile"
+  },
+  { //测试使用的, 无编译
+    "type": "lldb",
+    "request": "launch",
+    "name": "TestWithoutCompile",
+    "program": "${workspaceFolder}/build/bin/sql_test",
+    "args": [],
+    "cwd": "${workspaceFolder}/build",
+    "preLaunchTask": "TestWithoutCompile"
+  },
   ]
 }

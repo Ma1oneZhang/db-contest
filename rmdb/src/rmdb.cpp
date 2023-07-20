@@ -21,22 +21,17 @@ See the Mulan PSL v2 for more details. */
 #include <unistd.h>
 
 #include "analyze/analyze.h"
-#include "common/config.h"
 #include "errors.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/plan.h"
 #include "optimizer/planner.h"
 #include "portal.h"
 #include "recovery/log_recovery.h"
-#include "utils/timer.h"
 
 #define SOCK_PORT 8765
 #define MAX_CONN_LIMIT 8
 
 static bool should_exit = false;
-bool IS_SQL_TEST_MODE = false; //当前是否是SQL测试模式
-std::ifstream SQL_TEST_FILE;
-std::shared_ptr<Timer> timer; 
 
 // 构建全局所需的管理器对象
 auto disk_manager = std::make_unique<DiskManager>();
@@ -101,23 +96,11 @@ void *client_handler(void *sock_fd) {
 	std::string output =
 		"establish client connection, sockfd: " + std::to_string(fd) + "\n";
 	std::cout << output;
-	std::string temp_str; 
+	while (true) {
+		std::cout << "Waiting for request..." << std::endl;
+		memset(data_recv, 0, BUFFER_LENGTH);
+		i_recvBytes = read(fd, data_recv, BUFFER_LENGTH);
 
-	if (IS_SQL_TEST_MODE) {
-		timer->start(); 
-	}
-	
-	while (!IS_SQL_TEST_MODE 
-				|| ((memset(data_recv, 0, BUFFER_LENGTH), SQL_TEST_FILE.getline(data_recv, BUFFER_LENGTH)))) {
-		if (IS_SQL_TEST_MODE) {
-			std::cout << "Waiting for request..." << std::endl;
-			i_recvBytes = strlen(data_recv); 
-		} else {
-			std::cout << "Waiting for request..." << std::endl;
-			memset(data_recv, 0, BUFFER_LENGTH);
-			i_recvBytes = read(fd, data_recv, BUFFER_LENGTH);
-		}
-		
 		if (i_recvBytes == 0) {
 			std::cout << "Maybe the client has closed" << std::endl;
 			break;
@@ -126,7 +109,7 @@ void *client_handler(void *sock_fd) {
 			std::cout << "Client read error!" << std::endl;
 			break;
 		}
-		// printf("i_recvBytes: %d \n ", i_recvBytes);
+		printf("i_recvBytes: %d \n ", i_recvBytes);
 
 		if (strcmp(data_recv, "exit") == 0) {
 			std::cout << "Client exit." << std::endl;
@@ -143,7 +126,7 @@ void *client_handler(void *sock_fd) {
 		// Context *context = nullptr;
 		// 开启事务，初始化系统所需的上下文信息（包括事务对象指针、锁管理器指针、日志管理器指针、存放结果的buffer、记录结果长度的变量）
 		Context *context = new Context(lock_manager.get(), log_manager.get(),
-																	nullptr, data_send, &offset);
+																	 nullptr, data_send, &offset);
 		// SetTransaction(&txn_id, context);
 
 		// 用于判断是否已经调用了yy_delete_buffer来删除buf
@@ -227,14 +210,6 @@ void *client_handler(void *sock_fd) {
 		// 	txn_manager->commit(context->txn_, context->log_mgr_);
 		// }
 	}
-
-	if (IS_SQL_TEST_MODE) {
-		timer->elapsed(); 
-		timer->log();
-		exit(1);   //运行完直接退出
-	}
-
-
 	// Clear
 	std::cout << "Terminating current client_connection..." << std::endl;
 	close(fd);         // close a file descriptor.
@@ -323,45 +298,7 @@ void start_server() {
 }
 
 int main(int argc, char **argv) {
-	/** 当前工作路径为build */
-	if (argc == 3 || argc == 4) {  //参数 db_name sql_file_path test_name
-		std::string sql_folder_path = "sql"; 
-		std::string db_name = argv[1];
-
-		//每次测试都是新的测试数据库, 将之气的数据库删除
-		std::string cmd = "rm -rf " + db_name; 
-		system(cmd.c_str());
-		
-		//如果当前sql文件不存在 就创建一个
-		if (!sm_manager->is_dir(sql_folder_path)) {
-			std::string cmd = "mkdir " + sql_folder_path;
-			if (system(cmd.c_str()) < 0) {// 创建一个名为db_name的目录
-				std::cerr << "SQL文件夹创建失败\n";
-				exit(1);
-			}
-		}
-		
-		//需要测试的sql文件
-		auto sql_file_path = sql_folder_path + "/" + argv[2]; 
-		if (access(sql_file_path.c_str(), F_OK) == -1) {
-			std::cerr << "测试的SQL文件不存在\n";
-			exit(1);
-		}
-
-		//设置模式为SQL_TEST_MODE
-		IS_SQL_TEST_MODE = true; 
-		SQL_TEST_FILE.open(sql_file_path); 
-
-		//设置Timer的默认路径
-		auto timer_log_path = sql_folder_path + "/time.log";
-		if (argc == 4) { //如果初始参数给了time_log的名字
-			std::string time_log_name = argv[3]; 
-			timer = std::make_shared<Timer>(time_log_name, timer_log_path);
-		} else {
-			timer = std::make_shared<Timer>("Time elapsed", timer_log_path);
-		}
-	}
-	else if (argc != 2) {
+	if (argc != 2) {
 		// 需要指定数据库名称
 		std::cerr << "Usage: " << argv[0] << " <database>" << std::endl;
 		exit(1);
