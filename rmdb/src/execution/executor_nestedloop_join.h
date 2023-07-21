@@ -215,8 +215,10 @@ public:
 		cols_.insert(cols_.end(), right_cols.begin(), right_cols.end());
 
 		//设置左右实际的cols
-		left_->set_all_cols(cols_); 
-		right_->set_all_cols(cols_); 
+		auto prev_cols = right_->cols();
+		prev_cols.insert(prev_cols.end(), left_->cols().begin(), left_->cols().end());
+		left_->set_all_cols(prev_cols); 
+		right_->set_all_cols(prev_cols); 
 
 
 		fed_conds_ = std::move(conds);
