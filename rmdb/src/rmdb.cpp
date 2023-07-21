@@ -1,7 +1,7 @@
 /* Copyright (c) 2023 Renmin University of China
 RMDB is licensed under Mulan PSL v2.
-You can use this software according to the terms and conditions of the Mulan PSL
-v2. You may obtain a copy of Mulan PSL v2 at:
+You can use this software according to the terms and conditions of the Mulan PSL v2.
+You may obtain a copy of Mulan PSL v2 at:
         http://license.coscl.org.cn/MulanPSL2
 THIS SOFTWARE IS PROVIDED ON AN "AS IS" BASIS, WITHOUT WARRANTIES OF ANY KIND,
 EITHER EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO NON-INFRINGEMENT,
@@ -9,54 +9,37 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include <atomic>
-#include <cstring>
-#include <exception>
-#include <memory>
 #include <netinet/in.h>
 #include <readline/history.h>
 #include <readline/readline.h>
 #include <setjmp.h>
 #include <signal.h>
-#include <string_view>
 #include <unistd.h>
 
 #include "analyze/analyze.h"
-#include "common/config.h"
 #include "errors.h"
 #include "optimizer/optimizer.h"
 #include "optimizer/plan.h"
 #include "optimizer/planner.h"
 #include "portal.h"
 #include "recovery/log_recovery.h"
-#include "utils/timer.h"
 
 #define SOCK_PORT 8765
 #define MAX_CONN_LIMIT 8
 
 static bool should_exit = false;
-bool IS_SQL_TEST_MODE = false; //当前是否是SQL测试模式
-std::ifstream SQL_TEST_FILE;
-std::shared_ptr<Timer> timer; 
 
 // 构建全局所需的管理器对象
 auto disk_manager = std::make_unique<DiskManager>();
-auto buffer_pool_manager =
-	std::make_unique<BufferPoolManager>(BUFFER_POOL_SIZE, disk_manager.get());
-auto rm_manager =
-	std::make_unique<RmManager>(disk_manager.get(), buffer_pool_manager.get());
-auto ix_manager =
-	std::make_unique<IxManager>(disk_manager.get(), buffer_pool_manager.get());
-auto sm_manager =
-	std::make_unique<SmManager>(disk_manager.get(), buffer_pool_manager.get(),
-															rm_manager.get(), ix_manager.get());
+auto buffer_pool_manager = std::make_unique<BufferPoolManager>(BUFFER_POOL_SIZE, disk_manager.get());
+auto rm_manager = std::make_unique<RmManager>(disk_manager.get(), buffer_pool_manager.get());
+auto ix_manager = std::make_unique<IxManager>(disk_manager.get(), buffer_pool_manager.get());
+auto sm_manager = std::make_unique<SmManager>(disk_manager.get(), buffer_pool_manager.get(), rm_manager.get(), ix_manager.get());
 auto lock_manager = std::make_unique<LockManager>();
-auto txn_manager =
-	std::make_unique<TransactionManager>(lock_manager.get(), sm_manager.get());
-auto ql_manager =
-	std::make_unique<QlManager>(sm_manager.get(), txn_manager.get());
+auto txn_manager = std::make_unique<TransactionManager>(lock_manager.get(), sm_manager.get());
+auto ql_manager = std::make_unique<QlManager>(sm_manager.get(), txn_manager.get());
 auto log_manager = std::make_unique<LogManager>(disk_manager.get());
-auto recovery = std::make_unique<RecoveryManager>(
-	disk_manager.get(), buffer_pool_manager.get(), sm_manager.get());
+auto recovery = std::make_unique<RecoveryManager>(disk_manager.get(), buffer_pool_manager.get(), sm_manager.get());
 auto planner = std::make_unique<Planner>(sm_manager.get());
 auto optimizer = std::make_unique<Optimizer>(sm_manager.get(), planner.get());
 auto portal = std::make_unique<Portal>(sm_manager.get());
@@ -75,8 +58,7 @@ void sigint_handler(int signo) {
 // 判断当前正在执行的是显式事务还是单条SQL语句的事务，并更新事务ID
 void SetTransaction(txn_id_t *txn_id, Context *context) {
 	context->txn_ = txn_manager->get_transaction(*txn_id);
-	if (context->txn_ == nullptr ||
-			context->txn_->get_state() == TransactionState::COMMITTED ||
+	if (context->txn_ == nullptr || context->txn_->get_state() == TransactionState::COMMITTED ||
 			context->txn_->get_state() == TransactionState::ABORTED) {
 		context->txn_ = txn_manager->begin(nullptr, context->log_mgr_);
 		*txn_id = context->txn_->get_transaction_id();
@@ -98,26 +80,15 @@ void *client_handler(void *sock_fd) {
 	// 记录客户端当前正在执行的事务ID
 	txn_id_t txn_id = INVALID_TXN_ID;
 
-	std::string output =
-		"establish client connection, sockfd: " + std::to_string(fd) + "\n";
+	std::string output = "establish client connection, sockfd: " + std::to_string(fd) + "\n";
 	std::cout << output;
-	std::string temp_str; 
 
-	if (IS_SQL_TEST_MODE) {
-		timer->start(); 
-	}
-	
-	while (!IS_SQL_TEST_MODE 
-				|| ((memset(data_recv, 0, BUFFER_LENGTH), SQL_TEST_FILE.getline(data_recv, BUFFER_LENGTH)))) {
-		if (IS_SQL_TEST_MODE) {
-			std::cout << "Waiting for request..." << std::endl;
-			i_recvBytes = strlen(data_recv); 
-		} else {
-			std::cout << "Waiting for request..." << std::endl;
-			memset(data_recv, 0, BUFFER_LENGTH);
-			i_recvBytes = read(fd, data_recv, BUFFER_LENGTH);
-		}
-		
+	while (true) {
+		std::cout << "Waiting for request..." << std::endl;
+		memset(data_recv, 0, BUFFER_LENGTH);
+
+		i_recvBytes = read(fd, data_recv, BUFFER_LENGTH);
+
 		if (i_recvBytes == 0) {
 			std::cout << "Maybe the client has closed" << std::endl;
 			break;
@@ -126,7 +97,8 @@ void *client_handler(void *sock_fd) {
 			std::cout << "Client read error!" << std::endl;
 			break;
 		}
-		// printf("i_recvBytes: %d \n ", i_recvBytes);
+
+		printf("i_recvBytes: %d \n ", i_recvBytes);
 
 		if (strcmp(data_recv, "exit") == 0) {
 			std::cout << "Client exit." << std::endl;
@@ -136,15 +108,15 @@ void *client_handler(void *sock_fd) {
 			std::cout << "Server crash" << std::endl;
 			exit(1);
 		}
+
 		std::cout << "Read from client " << fd << ": " << data_recv << std::endl;
 
 		memset(data_send, '\0', BUFFER_LENGTH);
 		offset = 0;
-		// Context *context = nullptr;
+
 		// 开启事务，初始化系统所需的上下文信息（包括事务对象指针、锁管理器指针、日志管理器指针、存放结果的buffer、记录结果长度的变量）
-		Context *context = new Context(lock_manager.get(), log_manager.get(),
-																	nullptr, data_send, &offset);
-		// SetTransaction(&txn_id, context);
+		Context *context = new Context(lock_manager.get(), log_manager.get(), nullptr, data_send, &offset);
+		SetTransaction(&txn_id, context);
 
 		// 用于判断是否已经调用了yy_delete_buffer来删除buf
 		bool finish_analyze = false;
@@ -204,36 +176,22 @@ void *client_handler(void *sock_fd) {
 		if (finish_analyze == false) {
 			yy_delete_buffer(buf);
 			pthread_mutex_unlock(buffer_mutex);
-			// send client parse error
+			// future TODO: 格式化 sql_handler.result, 传给客户端
+			// send result with fixed format, use protobuf in the future
 			std::string_view parse_error = "SQL_parse error recheck the sql";
 			memcpy(data_send, parse_error.data(), parse_error.size());
 			data_send[parse_error.size()] = '\n';
 			data_send[parse_error.size() + 1] = '\0';
 			offset = parse_error.size() + 1;
-
-			// 	// write illuage sql to output file
-			// 	std::fstream outfile;
-			// 	outfile.open("output.txt", std::ios::out | std::ios::app);
-			// 	outfile << "failure\n";
-			// 	outfile.close();
 		}
-		// future TODO: 格式化 sql_handler.result, 传给客户端
-		// send result with fixed format, use protobuf in the future
 		if (write(fd, data_send, offset + 1) == -1) {
 			break;
 		}
 		// 如果是单挑语句，需要按照一个完整的事务来执行，所以执行完当前语句后，自动提交事务
-		// if (context->txn_->get_txn_mode() == false) {
-		// 	txn_manager->commit(context->txn_, context->log_mgr_);
-		// }
+		if (context->txn_->get_txn_mode() == false) {
+			txn_manager->commit(context->txn_, context->log_mgr_);
+		}
 	}
-
-	if (IS_SQL_TEST_MODE) {
-		timer->elapsed(); 
-		timer->log();
-		exit(1);   //运行完直接退出
-	}
-
 
 	// Clear
 	std::cout << "Terminating current client_connection..." << std::endl;
@@ -263,8 +221,7 @@ void start_server() {
 	s_addr_in.sin_family = AF_INET;
 	s_addr_in.sin_addr.s_addr = htonl(INADDR_ANY);
 	s_addr_in.sin_port = htons(SOCK_PORT);
-	fd_temp =
-		bind(sockfd_server, (struct sockaddr *) (&s_addr_in), sizeof(s_addr_in));
+	fd_temp = bind(sockfd_server, (struct sockaddr *) (&s_addr_in), sizeof(s_addr_in));
 	if (fd_temp == -1) {
 		std::cout << "Bind error!" << std::endl;
 		exit(1);
@@ -275,7 +232,7 @@ void start_server() {
 		std::cout << "Listen error!" << std::endl;
 		exit(1);
 	}
-	std::vector<int *> fds;
+
 	while (!should_exit) {
 		std::cout << "Waiting for new connection..." << std::endl;
 		pthread_t thread_id;
@@ -289,33 +246,23 @@ void start_server() {
 
 		// Block here. Until server accepts a new connection.
 		pthread_mutex_lock(sockfd_mutex);
-		auto sockfd = new int;
-		fds.push_back(sockfd);
-		*sockfd = accept(sockfd_server, (struct sockaddr *) (&s_addr_client),
-										 (socklen_t *) (&client_length));
-		if (*sockfd == -1) {
+		int sockfd = accept(sockfd_server, (struct sockaddr *) (&s_addr_client), (socklen_t *) (&client_length));
+		if (sockfd == -1) {
 			std::cout << "Accept error!" << std::endl;
 			continue;// ignore current socket ,continue while loop.
 		}
 
 		// 和客户端建立连接，并开启一个线程负责处理客户端请求
-		if (pthread_create(&thread_id, nullptr, &client_handler, (void *) sockfd) !=
-				0) {
+		if (pthread_create(&thread_id, nullptr, &client_handler, (void *) (&sockfd)) != 0) {
 			std::cout << "Create thread fail!" << std::endl;
 			break;// break while loop
 		}
 	}
-	for (auto fd: fds) {
-		delete fd;
-	}
+
 	// Clear
 	std::cout << " Try to close all client-connection.\n";
-	int ret = shutdown(
-		sockfd_server,
-		SHUT_WR);// shut down the all or part of a full-duplex connection.
-	if (ret == -1) {
-		printf("%s\n", strerror(errno));
-	}
+	int ret = shutdown(sockfd_server, SHUT_WR);// shut down the all or part of a full-duplex connection.
+	if (ret == -1) { printf("%s\n", strerror(errno)); }
 	//    assert(ret != -1);
 	sm_manager->close_db();
 	std::cout << " DB has been closed.\n";
@@ -323,45 +270,7 @@ void start_server() {
 }
 
 int main(int argc, char **argv) {
-	/** 当前工作路径为build */
-	if (argc == 3 || argc == 4) {  //参数 db_name sql_file_path test_name
-		std::string sql_folder_path = "sql"; 
-		std::string db_name = argv[1];
-
-		//每次测试都是新的测试数据库, 将之气的数据库删除
-		std::string cmd = "rm -rf " + db_name; 
-		system(cmd.c_str());
-		
-		//如果当前sql文件不存在 就创建一个
-		if (!sm_manager->is_dir(sql_folder_path)) {
-			std::string cmd = "mkdir " + sql_folder_path;
-			if (system(cmd.c_str()) < 0) {// 创建一个名为db_name的目录
-				std::cerr << "SQL文件夹创建失败\n";
-				exit(1);
-			}
-		}
-		
-		//需要测试的sql文件
-		auto sql_file_path = sql_folder_path + "/" + argv[2]; 
-		if (access(sql_file_path.c_str(), F_OK) == -1) {
-			std::cerr << "测试的SQL文件不存在\n";
-			exit(1);
-		}
-
-		//设置模式为SQL_TEST_MODE
-		IS_SQL_TEST_MODE = true; 
-		SQL_TEST_FILE.open(sql_file_path); 
-
-		//设置Timer的默认路径
-		auto timer_log_path = sql_folder_path + "/time.log";
-		if (argc == 4) { //如果初始参数给了time_log的名字
-			std::string time_log_name = argv[3]; 
-			timer = std::make_shared<Timer>(time_log_name, timer_log_path);
-		} else {
-			timer = std::make_shared<Timer>("Time elapsed", timer_log_path);
-		}
-	}
-	else if (argc != 2) {
+	if (argc != 2) {
 		// 需要指定数据库名称
 		std::cerr << "Usage: " << argv[0] << " <database>" << std::endl;
 		exit(1);

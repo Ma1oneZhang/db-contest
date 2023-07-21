@@ -18,6 +18,7 @@ See the Mulan PSL v2 for more details. */
 #include "index/ix.h"
 #include "record/rm_defs.h"
 #include "system/sm.h"
+#include "transaction/txn_defs.h"
 #include <cstring>
 #include <memory>
 #include <stdexcept>
@@ -315,6 +316,13 @@ public:
 		}
 		for (size_t i = 0; i < updated_records_.size(); i++) {
 			fh_->insert_record(rids[i], updated_records_[i]->data);
+		}
+		if (context_->txn_->get_txn_mode()) {
+			// add it to the deleted_records
+			for (size_t i = 0; i < updated_records_.size(); i++) {
+				WriteRecord *wrec = new WriteRecord(WType::UPDATE_TUPLE, tab_name_, rids_[i], *original_records_[i]);
+				context_->txn_->append_write_record(wrec);
+			}
 		}
 		is_executed = true;
 		return nullptr;

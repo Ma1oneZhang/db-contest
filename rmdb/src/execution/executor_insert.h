@@ -88,6 +88,11 @@ public:
 			}
 			ih->insert_entry(key->data, rid_, context_->txn_);
 		}
+		if (context_->txn_->get_txn_mode()) {
+			// add it to the deleted_records
+			WriteRecord *deleteRecord = new WriteRecord{WType::INSERT_TUPLE, tab_name_, rid_};
+			context_->txn_->append_write_record(deleteRecord);
+		}
 		return nullptr;
 	}
 	Rid &rid() override { return rid_; }

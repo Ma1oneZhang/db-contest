@@ -54,7 +54,7 @@ Rid RmFileHandle::insert_record(char *buf, Context *context) {
 	Bitmap::set(page_handle.bitmap, free);
 	update_record(rid, buf, context);
 	page_handle.page_hdr->num_records++;
-	if (page_handle.page_hdr->num_records == page_handle.file_hdr->num_records_per_page) {
+	if (page_handle.page_hdr->num_records == page_handle.file_hdr->num_records_per_page - 1) {
 		file_hdr_.first_free_page_no = page_handle.page_hdr->next_free_page_no;
 	}
 	buffer_pool_manager_->unpin_page({fd_, rid.page_no}, true);

@@ -189,7 +189,7 @@ private:
 			std::vector<RmRecord *> left_buffer;
 			for (size_t i = 0; i < buffer_vec_.size(); i++) {
 				left_buffer.push_back(buffer_vec_[i].get());
-				if (i != 0 && (i % 8 == 0 || i == buffer_vec_.size() - 1)) {
+				if (i != 0 && (i % 32 == 0 || i == buffer_vec_.size() - 1)) {
 					tasks.emplace_back(tp->submit(getNextMatchTuple, left_buffer, right_buffer.get()));
 					left_buffer.clear();
 				}

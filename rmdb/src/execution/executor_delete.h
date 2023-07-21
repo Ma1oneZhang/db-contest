@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "index/ix_index_handle.h"
 #include "system/sm.h"
 #include "system/sm_meta.h"
+#include "transaction/txn_defs.h"
 #include <memory>
 #include <vector>
 
@@ -156,23 +157,27 @@ public:
 	}
 	std::unique_ptr<RmRecord> Next() override {
 		std::vector<std::unique_ptr<RmRecord>> deleted_records;
-		for (auto scan = std::make_unique<RmScan>(fh_); !scan->is_end(); scan->next()) {
-			if (checkCondition(fh_->get_record(scan->rid(), nullptr))) {
-				auto rec = fh_->get_record(scan->rid(), nullptr);
-				// delete it from every index
-				for (size_t i = 0; i < tab_.indexes.size(); ++i) {
-					const auto &index = tab_.indexes[i];
-					const auto ih = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name_, index.cols)).get();
-					const std::unique_ptr<RmRecord> key = std::make_unique<RmRecord>(index.col_tot_len);
-					int offset = 0;
-					for (size_t i = 0; i < index.col_num; ++i) {
-						memcpy(key->data + offset, rec->data + index.cols[i].offset, index.cols[i].len);
-						offset += index.cols[i].len;
-					}
-					ih->delete_entry(key->data, context_->txn_);
+		for (auto rid : rids_) {
+			auto rec = fh_->get_record(rid, nullptr);
+			// delete it from every index
+			for (size_t i = 0; i < tab_.indexes.size(); ++i) {
+				const auto &index = tab_.indexes[i];
+				const auto ih = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name_, index.cols)).get();
+				const std::unique_ptr<RmRecord> key = std::make_unique<RmRecord>(index.col_tot_len);
+				int offset = 0;
+				for (size_t i = 0; i < index.col_num; ++i) {
+					memcpy(key->data + offset, rec->data + index.cols[i].offset, index.cols[i].len);
+					offset += index.cols[i].len;
 				}
-				// delete from disk
-				fh_->delete_record(scan->rid(), context_);
+				ih->delete_entry(key->data, context_->txn_);
+			}
+			// delete from disk
+			fh_->delete_record(rid, context_);
+			// if the transtions is open
+			if (context_->txn_->get_txn_mode()) {
+				// add it to the deleted_records
+				WriteRecord *deleteRecord = new WriteRecord{WType::DELETE_TUPLE, tab_name_, rid, *rec};
+				context_->txn_->append_write_record(deleteRecord);
 			}
 		}
 		is_executed = true;
