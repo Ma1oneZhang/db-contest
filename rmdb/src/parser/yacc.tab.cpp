@@ -66,7 +66,7 @@
 
 
 /* First part of user prologue.  */
-#line 1 "yacc.y"
+#line 1 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
 
 #include "ast.h"
 #include "yacc.tab.h"
@@ -81,7 +81,7 @@ void yyerror(YYLTYPE *locp, const char* s) {
 
 using namespace ast;
 
-#line 85 "yacc.tab.cpp"
+#line 85 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
 
 # ifndef YY_CAST
 #  ifdef __cplusplus
@@ -114,8 +114,8 @@ using namespace ast;
 
 /* Use api.header.include to #include this header
    instead of duplicating it here.  */
-#ifndef YY_YY_YACC_TAB_HPP_INCLUDED
-# define YY_YY_YACC_TAB_HPP_INCLUDED
+#ifndef YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
+# define YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -199,7 +199,7 @@ struct YYLTYPE
 
 int yyparse (void);
 
-#endif /* !YY_YY_YACC_TAB_HPP_INCLUDED  */
+#endif /* !YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED  */
 
 
 
@@ -1585,687 +1585,687 @@ yyreduce:
   switch (yyn)
     {
   case 2:
-#line 65 "yacc.y"
+#line 65 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         parse_tree = (yyvsp[-1].sv_node);
         YYACCEPT;
     }
-#line 1594 "yacc.tab.cpp"
+#line 1594 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 3:
-#line 70 "yacc.y"
+#line 70 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         parse_tree = std::make_shared<Help>();
         YYACCEPT;
     }
-#line 1603 "yacc.tab.cpp"
+#line 1603 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 4:
-#line 75 "yacc.y"
+#line 75 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         parse_tree = nullptr;
         YYACCEPT;
     }
-#line 1612 "yacc.tab.cpp"
+#line 1612 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 5:
-#line 80 "yacc.y"
+#line 80 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         parse_tree = nullptr;
         YYACCEPT;
     }
-#line 1621 "yacc.tab.cpp"
+#line 1621 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 10:
-#line 95 "yacc.y"
+#line 95 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<TxnBegin>();
     }
-#line 1629 "yacc.tab.cpp"
+#line 1629 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 11:
-#line 99 "yacc.y"
+#line 99 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<TxnCommit>();
     }
-#line 1637 "yacc.tab.cpp"
+#line 1637 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 12:
-#line 103 "yacc.y"
+#line 103 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<TxnAbort>();
     }
-#line 1645 "yacc.tab.cpp"
+#line 1645 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 13:
-#line 107 "yacc.y"
+#line 107 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<TxnRollback>();
     }
-#line 1653 "yacc.tab.cpp"
+#line 1653 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 14:
-#line 114 "yacc.y"
+#line 114 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<ShowTables>();
     }
-#line 1661 "yacc.tab.cpp"
+#line 1661 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 15:
-#line 118 "yacc.y"
+#line 118 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<ShowIndex>((yyvsp[0].sv_str));
     }
-#line 1669 "yacc.tab.cpp"
+#line 1669 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 16:
-#line 125 "yacc.y"
+#line 125 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<CreateTable>((yyvsp[-3].sv_str), (yyvsp[-1].sv_fields));
     }
-#line 1677 "yacc.tab.cpp"
+#line 1677 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 17:
-#line 129 "yacc.y"
+#line 129 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<DropTable>((yyvsp[0].sv_str));
     }
-#line 1685 "yacc.tab.cpp"
+#line 1685 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 18:
-#line 133 "yacc.y"
+#line 133 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<DescTable>((yyvsp[0].sv_str));
     }
-#line 1693 "yacc.tab.cpp"
+#line 1693 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 19:
-#line 137 "yacc.y"
+#line 137 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<CreateIndex>((yyvsp[-3].sv_str), (yyvsp[-1].sv_strs));
     }
-#line 1701 "yacc.tab.cpp"
+#line 1701 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 20:
-#line 141 "yacc.y"
+#line 141 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<DropIndex>((yyvsp[-3].sv_str), (yyvsp[-1].sv_strs));
     }
-#line 1709 "yacc.tab.cpp"
+#line 1709 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 21:
-#line 148 "yacc.y"
+#line 148 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<InsertStmt>((yyvsp[-4].sv_str), (yyvsp[-1].sv_vals));
     }
-#line 1717 "yacc.tab.cpp"
+#line 1717 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 22:
-#line 152 "yacc.y"
+#line 152 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<DeleteStmt>((yyvsp[-1].sv_str), (yyvsp[0].sv_conds));
     }
-#line 1725 "yacc.tab.cpp"
+#line 1725 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 23:
-#line 156 "yacc.y"
+#line 156 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<UpdateStmt>((yyvsp[-3].sv_str), (yyvsp[-1].sv_set_clauses), (yyvsp[0].sv_conds));
     }
-#line 1733 "yacc.tab.cpp"
+#line 1733 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 24:
-#line 160 "yacc.y"
+#line 160 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_node) = std::make_shared<SelectStmt>((yyvsp[-5].sv_cols), (yyvsp[-3].sv_strs), (yyvsp[-2].sv_conds), (yyvsp[-1].sv_orderbys), (yyvsp[-6].sv_aggregates), (yyvsp[0].sv_limit));
     }
-#line 1741 "yacc.tab.cpp"
+#line 1741 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 25:
-#line 167 "yacc.y"
+#line 167 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_fields) = std::vector<std::shared_ptr<Field>>{(yyvsp[0].sv_field)};
     }
-#line 1749 "yacc.tab.cpp"
+#line 1749 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 26:
-#line 171 "yacc.y"
+#line 171 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_fields).push_back((yyvsp[0].sv_field));
     }
-#line 1757 "yacc.tab.cpp"
+#line 1757 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 27:
-#line 178 "yacc.y"
+#line 178 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_strs) = std::vector<std::string>{(yyvsp[0].sv_str)};
     }
-#line 1765 "yacc.tab.cpp"
+#line 1765 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 28:
-#line 182 "yacc.y"
+#line 182 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_strs).push_back((yyvsp[0].sv_str));
     }
-#line 1773 "yacc.tab.cpp"
+#line 1773 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 29:
-#line 189 "yacc.y"
+#line 189 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_field) = std::make_shared<ColDef>((yyvsp[-1].sv_str), (yyvsp[0].sv_type_len));
     }
-#line 1781 "yacc.tab.cpp"
+#line 1781 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 30:
-#line 196 "yacc.y"
+#line 196 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_type_len) = std::make_shared<TypeLen>(SV_TYPE_INT, sizeof(int));
     }
-#line 1789 "yacc.tab.cpp"
+#line 1789 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 31:
-#line 200 "yacc.y"
+#line 200 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_type_len) = std::make_shared<TypeLen>(SV_TYPE_STRING, (yyvsp[-1].sv_int));
     }
-#line 1797 "yacc.tab.cpp"
+#line 1797 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 32:
-#line 204 "yacc.y"
+#line 204 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_type_len) = std::make_shared<TypeLen>(SV_TYPE_DATETIME, 19);
     }
-#line 1805 "yacc.tab.cpp"
+#line 1805 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 33:
-#line 208 "yacc.y"
+#line 208 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_type_len) = std::make_shared<TypeLen>(SV_TYPE_FLOAT, sizeof(double));
     }
-#line 1813 "yacc.tab.cpp"
+#line 1813 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 34:
-#line 212 "yacc.y"
+#line 212 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_type_len) = std::make_shared<TypeLen>(SV_TYPE_BIGINT, sizeof(int64_t));
     }
-#line 1821 "yacc.tab.cpp"
+#line 1821 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 35:
-#line 219 "yacc.y"
+#line 219 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_vals) = std::vector<std::shared_ptr<Value>>{(yyvsp[0].sv_val)};
     }
-#line 1829 "yacc.tab.cpp"
+#line 1829 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 36:
-#line 223 "yacc.y"
+#line 223 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_vals).push_back((yyvsp[0].sv_val));
     }
-#line 1837 "yacc.tab.cpp"
+#line 1837 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 37:
-#line 230 "yacc.y"
+#line 230 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_val) = std::make_shared<IntLit>((yyvsp[0].sv_int));
     }
-#line 1845 "yacc.tab.cpp"
+#line 1845 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 38:
-#line 234 "yacc.y"
+#line 234 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_val) = std::make_shared<FloatLit>((yyvsp[0].sv_float));
     }
-#line 1853 "yacc.tab.cpp"
+#line 1853 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 39:
-#line 238 "yacc.y"
+#line 238 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_val) = std::make_shared<StringLit>((yyvsp[0].sv_str));
     }
-#line 1861 "yacc.tab.cpp"
+#line 1861 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 40:
-#line 242 "yacc.y"
+#line 242 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_val) = std::make_shared<BigintLit>((yyvsp[0].sv_bigint));
     }
-#line 1869 "yacc.tab.cpp"
+#line 1869 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 41:
-#line 249 "yacc.y"
+#line 249 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_cond) = std::make_shared<BinaryExpr>((yyvsp[-2].sv_col), (yyvsp[-1].sv_comp_op), (yyvsp[0].sv_expr));
     }
-#line 1877 "yacc.tab.cpp"
+#line 1877 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 42:
-#line 255 "yacc.y"
+#line 255 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
                       { /* ignore*/ }
-#line 1883 "yacc.tab.cpp"
+#line 1883 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 43:
-#line 257 "yacc.y"
+#line 257 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_conds) = (yyvsp[0].sv_conds);
     }
-#line 1891 "yacc.tab.cpp"
+#line 1891 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 44:
-#line 264 "yacc.y"
+#line 264 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_conds) = std::vector<std::shared_ptr<BinaryExpr>>{(yyvsp[0].sv_cond)};
     }
-#line 1899 "yacc.tab.cpp"
+#line 1899 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 45:
-#line 268 "yacc.y"
+#line 268 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_conds).push_back((yyvsp[0].sv_cond));
     }
-#line 1907 "yacc.tab.cpp"
+#line 1907 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 46:
-#line 275 "yacc.y"
+#line 275 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_col) = std::make_shared<Col>((yyvsp[-2].sv_str), (yyvsp[0].sv_str));
     }
-#line 1915 "yacc.tab.cpp"
+#line 1915 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 47:
-#line 279 "yacc.y"
+#line 279 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_col) = std::make_shared<Col>("", (yyvsp[0].sv_str));
     }
-#line 1923 "yacc.tab.cpp"
+#line 1923 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 48:
-#line 286 "yacc.y"
+#line 286 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_cols) = std::vector<std::shared_ptr<Col>>{(yyvsp[0].sv_col)};
     }
-#line 1931 "yacc.tab.cpp"
+#line 1931 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 49:
-#line 290 "yacc.y"
+#line 290 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_cols).push_back((yyvsp[0].sv_col));
     }
-#line 1939 "yacc.tab.cpp"
+#line 1939 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 50:
-#line 297 "yacc.y"
+#line 297 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_comp_op) = SV_OP_EQ;
     }
-#line 1947 "yacc.tab.cpp"
+#line 1947 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 51:
-#line 301 "yacc.y"
+#line 301 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_comp_op) = SV_OP_LT;
     }
-#line 1955 "yacc.tab.cpp"
+#line 1955 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 52:
-#line 305 "yacc.y"
+#line 305 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_comp_op) = SV_OP_GT;
     }
-#line 1963 "yacc.tab.cpp"
+#line 1963 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 53:
-#line 309 "yacc.y"
+#line 309 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_comp_op) = SV_OP_NE;
     }
-#line 1971 "yacc.tab.cpp"
+#line 1971 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 54:
-#line 313 "yacc.y"
+#line 313 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_comp_op) = SV_OP_LE;
     }
-#line 1979 "yacc.tab.cpp"
+#line 1979 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 55:
-#line 317 "yacc.y"
+#line 317 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_comp_op) = SV_OP_GE;
     }
-#line 1987 "yacc.tab.cpp"
+#line 1987 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 56:
-#line 324 "yacc.y"
+#line 324 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_expr) = std::static_pointer_cast<Expr>((yyvsp[0].sv_val));
     }
-#line 1995 "yacc.tab.cpp"
+#line 1995 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 57:
-#line 328 "yacc.y"
+#line 328 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_expr) = std::static_pointer_cast<Expr>((yyvsp[0].sv_col));
     }
-#line 2003 "yacc.tab.cpp"
+#line 2003 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 58:
-#line 335 "yacc.y"
+#line 335 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_set_clauses) = std::vector<std::shared_ptr<SetClause>>{(yyvsp[0].sv_set_clause)};
     }
-#line 2011 "yacc.tab.cpp"
+#line 2011 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 59:
-#line 339 "yacc.y"
+#line 339 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_set_clauses).push_back((yyvsp[0].sv_set_clause));
     }
-#line 2019 "yacc.tab.cpp"
+#line 2019 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 60:
-#line 346 "yacc.y"
+#line 346 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_set_clause) = std::make_shared<SetClause>((yyvsp[-2].sv_str), (yyvsp[0].sv_val));
     }
-#line 2027 "yacc.tab.cpp"
+#line 2027 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 61:
-#line 350 "yacc.y"
+#line 350 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_set_clause) = std::make_shared<SetClause>((yyvsp[-4].sv_str), (yyvsp[0].sv_val), 0);
     }
-#line 2035 "yacc.tab.cpp"
+#line 2035 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 62:
-#line 354 "yacc.y"
+#line 354 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_set_clause) = std::make_shared<SetClause>((yyvsp[-4].sv_str), (yyvsp[0].sv_val), 1);
     }
-#line 2043 "yacc.tab.cpp"
+#line 2043 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 63:
-#line 358 "yacc.y"
+#line 358 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_set_clause) = std::make_shared<SetClause>((yyvsp[-4].sv_str), (yyvsp[0].sv_val), 2);
     }
-#line 2051 "yacc.tab.cpp"
+#line 2051 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 64:
-#line 362 "yacc.y"
+#line 362 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_set_clause) = std::make_shared<SetClause>((yyvsp[-4].sv_str), (yyvsp[0].sv_val), 3);
     }
-#line 2059 "yacc.tab.cpp"
+#line 2059 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 65:
-#line 369 "yacc.y"
+#line 369 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_aggregates) = std::vector<std::shared_ptr<Aggregate>>{(yyvsp[0].sv_aggregate)}; 
     }
-#line 2067 "yacc.tab.cpp"
+#line 2067 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 66:
-#line 373 "yacc.y"
+#line 373 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_aggregates).push_back((yyvsp[0].sv_aggregate)); 
     }
-#line 2075 "yacc.tab.cpp"
+#line 2075 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 67:
-#line 376 "yacc.y"
+#line 376 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
                       { /* ignore*/ }
-#line 2081 "yacc.tab.cpp"
+#line 2081 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 68:
-#line 381 "yacc.y"
+#line 381 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_aggregate) = std::make_shared<Aggregate>((yyvsp[-2].sv_cols), (yyvsp[-4].sv_aggregate_dir), (yyvsp[0].sv_col));
     }
-#line 2089 "yacc.tab.cpp"
+#line 2089 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 69:
-#line 384 "yacc.y"
+#line 384 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
                       { /* ignore*/ }
-#line 2095 "yacc.tab.cpp"
+#line 2095 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 70:
-#line 389 "yacc.y"
+#line 389 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_aggregate_dir) = Aggregate_COUNT;
     }
-#line 2103 "yacc.tab.cpp"
+#line 2103 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 71:
-#line 393 "yacc.y"
+#line 393 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_aggregate_dir) = Aggregate_MAX;
     }
-#line 2111 "yacc.tab.cpp"
+#line 2111 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 72:
-#line 397 "yacc.y"
+#line 397 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_aggregate_dir) = Aggregate_MIN;
     }
-#line 2119 "yacc.tab.cpp"
+#line 2119 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 73:
-#line 401 "yacc.y"
+#line 401 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_aggregate_dir) = Aggregate_SUM; 
     }
-#line 2127 "yacc.tab.cpp"
+#line 2127 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 74:
-#line 409 "yacc.y"
+#line 409 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_col) = (yyvsp[0].sv_col);
     }
-#line 2135 "yacc.tab.cpp"
+#line 2135 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 75:
-#line 413 "yacc.y"
+#line 413 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_col) = {};  /** 没有别名, 返回一个空的回去*/
     }
-#line 2143 "yacc.tab.cpp"
+#line 2143 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 76:
-#line 421 "yacc.y"
+#line 421 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_cols) = {};
     }
-#line 2151 "yacc.tab.cpp"
+#line 2151 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 77:
-#line 425 "yacc.y"
+#line 425 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_cols) = (yyvsp[0].sv_cols);
     }
-#line 2159 "yacc.tab.cpp"
+#line 2159 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 78:
-#line 428 "yacc.y"
+#line 428 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
                       { /* ignore*/ }
-#line 2165 "yacc.tab.cpp"
+#line 2165 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 79:
-#line 433 "yacc.y"
+#line 433 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_strs) = std::vector<std::string>{(yyvsp[0].sv_str)};
     }
-#line 2173 "yacc.tab.cpp"
+#line 2173 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 80:
-#line 437 "yacc.y"
+#line 437 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_strs).push_back((yyvsp[0].sv_str));
     }
-#line 2181 "yacc.tab.cpp"
+#line 2181 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 81:
-#line 441 "yacc.y"
+#line 441 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_strs).push_back((yyvsp[0].sv_str));
     }
-#line 2189 "yacc.tab.cpp"
+#line 2189 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 82:
-#line 448 "yacc.y"
+#line 448 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     { 
         (yyval.sv_orderbys) = (yyvsp[0].sv_orderbys); 
     }
-#line 2197 "yacc.tab.cpp"
+#line 2197 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 83:
-#line 451 "yacc.y"
+#line 451 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
                       { /* ignore*/ }
-#line 2203 "yacc.tab.cpp"
+#line 2203 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 84:
-#line 456 "yacc.y"
+#line 456 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_orderbys) = std::vector<std::shared_ptr<ast::OrderBy>>{(yyvsp[0].sv_orderby)}; 
     }
-#line 2211 "yacc.tab.cpp"
+#line 2211 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 85:
-#line 460 "yacc.y"
+#line 460 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_orderbys).push_back((yyvsp[0].sv_orderby)); 
     }
-#line 2219 "yacc.tab.cpp"
+#line 2219 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 86:
-#line 467 "yacc.y"
+#line 467 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     { 
         (yyval.sv_orderby) = std::make_shared<ast::OrderBy>((yyvsp[-1].sv_cols), (yyvsp[0].sv_orderby_dir));
     }
-#line 2227 "yacc.tab.cpp"
+#line 2227 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 87:
-#line 474 "yacc.y"
+#line 474 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     { 
         (yyval.sv_orderby_dir) = OrderBy_ASC;     
     }
-#line 2235 "yacc.tab.cpp"
+#line 2235 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 88:
-#line 478 "yacc.y"
+#line 478 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     { 
         (yyval.sv_orderby_dir) = OrderBy_DESC;    
     }
-#line 2243 "yacc.tab.cpp"
+#line 2243 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 89:
-#line 482 "yacc.y"
+#line 482 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     { 
         (yyval.sv_orderby_dir) = OrderBy_DEFAULT; 
     }
-#line 2251 "yacc.tab.cpp"
+#line 2251 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 90:
-#line 490 "yacc.y"
+#line 490 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
     {
         (yyval.sv_limit) = std::make_shared<Limit>((yyvsp[0].sv_int)); 
     }
-#line 2259 "yacc.tab.cpp"
+#line 2259 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
   case 91:
-#line 493 "yacc.y"
+#line 493 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"
         {/* none */}
-#line 2265 "yacc.tab.cpp"
+#line 2265 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
     break;
 
 
-#line 2269 "yacc.tab.cpp"
+#line 2269 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.tab.cpp"
 
       default: break;
     }
@@ -2503,4 +2503,4 @@ yyreturn:
 #endif
   return yyresult;
 }
-#line 499 "yacc.y"
+#line 499 "/home/ziyang/cpp/db-contest-github/rmdb/src/parser/yacc.y"

@@ -24,17 +24,17 @@ See the Mulan PSL v2 for more details. */
 #include <memory>
 #include <unordered_map>
 #include <utility>
+#include <utils/ThreadPool.h>
 #include <vector>
-
 class NestedLoopJoinExecutor : public AbstractExecutor {
 private:
-	std::unique_ptr<AbstractExecutor> left_;                                            // 左儿子节点（需要join的表）
-	std::unique_ptr<AbstractExecutor> right_;                                           // 右儿子节点（需要join的表）
-	size_t len_;                                                                        // join后获得的每条记录的长度
-	std::vector<ColMeta> cols_;                                                         // join后获得的记录的字段
-	std::unordered_map<std::string, std::vector<std::unique_ptr<RmRecord>>> hash_table_;// hash join table(we start join from left)
-	std::unordered_map<std::string, std::vector<std::unique_ptr<RmRecord>>>::const_iterator join_current_vec_it;
-	long long current_vec_pos;// pos in the vector -1 means not exist
+	std::unique_ptr<AbstractExecutor> left_;           // 左儿子节点（需要join的表）
+	std::unique_ptr<AbstractExecutor> right_;          // 右儿子节点（需要join的表）
+	size_t len_;                                       // join后获得的每条记录的长度
+	std::vector<ColMeta> cols_;                        // join后获得的记录的字段
+	std::vector<std::unique_ptr<RmRecord>> buffer_vec_;// block join buffer
+	static constexpr int MAX_BUFFER_SIZE = 2048;       // block join buffer size
+	int64_t current_buffer_pos;                        // pos in the vector -1 means not exist
 	std::map<std::pair<std::string, std::string>,
 					 std::pair<bool, std::vector<ColMeta>::const_iterator>>
 		table_col_table;// 记录对应col的表名和指针
@@ -43,80 +43,163 @@ private:
 	std::vector<Condition> fed_conds_;// join条件
 
 	std::unique_ptr<RmRecord> current_;
+	std::unordered_map<CompOp, CompOp> swapOp = {
+		{OP_GE, OP_LE},
+		{OP_LE, OP_GE},
+		{OP_EQ, OP_EQ},
+		{OP_NE, OP_NE},
+		{OP_GT, OP_LT},
+		{OP_LT, OP_GT}};
 
 	__inline__ std::pair<bool, std::vector<ColMeta>::const_iterator> findByColMeta(const ColMeta &meta) {
 		return table_col_table[{meta.tab_name, meta.name}];
 	}
 
-	void preProcessJoinHashTable() {
-		// init hash_table
-		for (right_->beginTuple(); !right_->is_end(); right_->nextTuple()) {
-			auto right_rec = right_->Next();
-			std::string bin_data = "p:";
-			bin_data.reserve(right_->tupleLen());
-			for (auto fed_cond: fed_conds_) {
-				assert(fed_cond.op == OP_EQ);
-				auto [is_left, it] = findByColMeta({fed_cond.rhs_col.tab_name, fed_cond.rhs_col.col_name});
-				if (is_left) {
-					std::swap(fed_cond.lhs_col, fed_cond.rhs_col);
-					it = findByColMeta({fed_cond.rhs_col.tab_name, fed_cond.rhs_col.col_name}).second;
-				}
-				if (it->type == TYPE_INT) {
-					auto hashed = std::hash<int>{}(*(int *) (right_rec->data + it->offset));
-					bin_data += std::string((char *) &hashed, sizeof(size_t));
-				} else if (it->type == TYPE_BIGINT) {
-					auto hashed = std::hash<int64_t>{}(*(int64_t *) (right_rec->data + it->offset));
-					bin_data += std::string((char *) &hashed, sizeof(size_t));
-				} else {
-					bin_data += std::string(right_rec->data + it->offset, it->len);
-				}
-			}
-			hash_table_[bin_data].emplace_back(std::make_unique<RmRecord>(*right_rec.get()));
-		}
-		// init the iterator
-		std::string bin_data = "n:";
-		while (!left_->is_end() && hash_table_.find(bin_data) == hash_table_.end()) {
-			bin_data = "p:";
-			auto left_rec = left_->Next();
-			for (auto fed_cond: fed_conds_) {
-				auto [is_left, it] = findByColMeta({fed_cond.lhs_col.tab_name, fed_cond.lhs_col.col_name});
-				if (it->type == TYPE_INT) {
-					auto hashed = std::hash<int>{}(*(int *) (left_rec->data + it->offset));
-					bin_data += std::string((char *) &hashed, sizeof(size_t));
-				} else if (it->type == TYPE_BIGINT) {
-					auto hashed = std::hash<int64_t>{}(*(int64_t *) (left_rec->data + it->offset));
-					bin_data += std::string((char *) &hashed, sizeof(size_t));
-				} else {
-					bin_data += std::string(left_rec->data + it->offset, it->len);
-				}
-			}
-			if (hash_table_.find(bin_data) == hash_table_.end())
-				left_->nextTuple();
-			else
-				break;
-		}
-		current_vec_pos = 0;
-		join_current_vec_it = hash_table_.find(bin_data);
-		if (join_current_vec_it == hash_table_.end()) {
-			return;
-		}
-		current_ = std::make_unique<RmRecord>(len_);
-		auto left_rec = left_->Next();
-		auto &right_rec = join_current_vec_it->second[current_vec_pos];
-		for (auto col: cols_) {
-			auto [is_left, it] = table_col_table[{col.tab_name, col.name}];
-			if (is_left) {
-				memcpy(current_->data + col.offset, left_rec->data + it->offset, it->len);
-			} else {
-				memcpy(current_->data + col.offset, right_rec->data + it->offset, it->len);
-			}
-		}
-		current_vec_pos++;
-		if (current_vec_pos == (long long) join_current_vec_it->second.size()) {
-			current_vec_pos = -1;
+	void getNextBlockBuffer() {
+		buffer_vec_.clear();
+		for (size_t i = 0; i < MAX_BUFFER_SIZE && !left_->is_end(); i++, left_->nextTuple()) {
+			buffer_vec_.emplace_back(left_->Next());
 		}
 	}
 
+	bool checkCondition(const RmRecord *left, const RmRecord *right) {
+		for (auto &cond: fed_conds_) {
+			auto col = get_col(cols_, cond.lhs_col);
+			auto lhs = left->data + col->offset;
+			char *rhs;
+			ColType rhs_type;
+			if (cond.is_rhs_val) {
+				rhs_type = cond.rhs_val.type;
+				rhs = cond.rhs_val.raw->data;
+			} else {
+				auto [_, rhs_col] = findByColMeta({cond.rhs_col.tab_name, cond.rhs_col.col_name});
+				rhs_type = rhs_col->type;
+				rhs = right->data + rhs_col->offset;
+			}
+			int cmp;
+			if (col->type == TYPE_INT) {
+				// handle int type
+				if (rhs_type == TYPE_BIGINT) {
+					cmp = ix_compare((int *) lhs, (int64_t *) rhs, rhs_type, col->len);
+				} else {
+					if (col->type != rhs_type) {
+						throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+					}
+					cmp = ix_compare((int *) lhs, (int *) rhs, rhs_type, col->len);
+				}
+			} else if (col->type == TYPE_FLOAT) {
+				// handle float type
+				if (rhs_type == TYPE_INT) {
+					cmp = ix_compare((double *) lhs, (int *) rhs, rhs_type, col->len);
+				} else if (rhs_type == TYPE_FLOAT) {
+					cmp = ix_compare((double *) lhs, (double *) rhs, rhs_type, col->len);
+				} else if (rhs_type == TYPE_BIGINT) {
+					cmp = ix_compare((double *) lhs, (int64_t *) rhs, rhs_type, col->len);
+				} else {
+					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+				}
+			} else if (col->type == TYPE_STRING) {
+				// handle string type
+				if (col->type != rhs_type) {
+					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+				}
+				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
+			} else if (col->type == TYPE_DATETIME) {
+				if (col->type != rhs_type) {
+					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+				}
+				cmp = ix_compare(lhs, rhs, rhs_type, col->len);
+			} else if (col->type == TYPE_BIGINT) {
+				if (rhs_type == TYPE_INT) {
+					cmp = ix_compare((int64_t *) lhs, (int *) rhs, rhs_type, col->len);
+				} else if (rhs_type == TYPE_BIGINT) {
+					cmp = ix_compare((int64_t *) lhs, (int64_t *) rhs, rhs_type, col->len);
+				} else {
+					throw IncompatibleTypeError(coltype2str(col->type), coltype2str(rhs_type));
+				}
+			} else {
+				// somewhere unkonwn
+				throw std::logic_error("somewhere unkonwn");
+			}
+			switch (cond.op) {
+				case OP_EQ:
+					if (cmp != 0)
+						return false;
+					break;
+				case OP_NE:
+					if (cmp == 0)
+						return false;
+					break;
+				case OP_GE:
+					if (cmp < 0)
+						return false;
+					break;
+				case OP_LE:
+					if (cmp > 0)
+						return false;
+					break;
+				case OP_GT:
+					if (cmp <= 0)
+						return false;
+					break;
+				case OP_LT:
+					if (cmp >= 0)
+						return false;
+					break;
+				default:
+					assert(false);
+			}
+		}
+		return true;
+	}
+	std::vector<std::unique_ptr<RmRecord>> match_tuples;
+	std::mutex mu_of_match_tuple;
+	std::unique_ptr<ThreadPool> tp;
+	void getNextMatchVector() {
+		while (match_tuples.size() == 0 && !(left_->is_end() && right_->is_end())) {
+			getNextBlockBuffer();
+			// means scan over
+			if (buffer_vec_.size() == 0) {
+				right_->nextTuple();
+				left_->beginTuple();
+				continue;
+			}
+			std::vector<std::future<void>> tasks;
+			auto right_buffer = right_->Next();
+			// scan all buffer in the tuple
+			std::function<void(const std::vector<RmRecord *> left, const RmRecord *right)> getNextMatchTuple =
+				[&](const std::vector<RmRecord *> left_vec, const RmRecord *right) {
+					for (auto left: left_vec) {
+						if (checkCondition(left, right)) {
+							auto match_tuple = std::make_unique<RmRecord>(len_);
+							for (auto col: cols_) {
+								auto [is_left, it] = table_col_table[{col.tab_name, col.name}];
+								if (is_left) {
+									memcpy(match_tuple->data + col.offset, left->data + it->offset, it->len);
+								} else {
+									memcpy(match_tuple->data + col.offset, right->data + it->offset, it->len);
+								}
+							}
+							mu_of_match_tuple.lock();
+							match_tuples.emplace_back(std::move(match_tuple));
+							mu_of_match_tuple.unlock();
+						}
+					}
+				};
+			std::vector<RmRecord *> left_buffer;
+			for (size_t i = 0; i < buffer_vec_.size(); i++) {
+				left_buffer.push_back(buffer_vec_[i].get());
+				if (i != 0 && (i % 8 == 0 || i == buffer_vec_.size() - 1)) {
+					tasks.emplace_back(tp->submit(getNextMatchTuple, left_buffer, right_buffer.get()));
+					left_buffer.clear();
+				}
+			}
+			// wait all task finish
+			for (auto &task: tasks) {
+				task.get();
+			}
+		}
+	}
 
 public:
 	NestedLoopJoinExecutor(std::unique_ptr<AbstractExecutor> left, std::unique_ptr<AbstractExecutor> right,
@@ -132,6 +215,17 @@ public:
 		cols_.insert(cols_.end(), right_cols.begin(), right_cols.end());
 		fed_conds_ = std::move(conds);
 		is_join = (fed_conds_.size() > 0);
+		for (auto &cond: fed_conds_) {
+			if (!cond.is_rhs_val) {
+				if (left_->cols()[0].tab_name != cond.lhs_col.tab_name) {
+					std::swap(cond.lhs_col, cond.rhs_col);
+					cond.op = swapOp[cond.op];
+				}
+			}
+		}
+		// 20 thread maybe enough
+		tp = std::make_unique<ThreadPool>(20);
+		tp->init();
 		for (size_t i = 0; i < left_->cols().size(); i++) {
 			const auto &vec = left_->cols();
 			table_col_table[{vec[i].tab_name, vec[i].name}] = {true, left_->cols().begin() + i};
@@ -140,7 +234,7 @@ public:
 			const auto &vec = right_->cols();
 			table_col_table[{vec[i].tab_name, vec[i].name}] = {false, right_->cols().begin() + i};
 		}
-		current_vec_pos = -1;
+		current_buffer_pos = -1;
 	}
 
 	const std::vector<ColMeta> &cols() override {
@@ -156,71 +250,33 @@ public:
 		if (right_->is_end()) {
 			return;
 		}
-		current_ = std::make_unique<RmRecord>(len_);
-		preProcessJoinHashTable();
+		getNextMatchVector();
+		nextTuple();
 	}
 
 	void nextTuple() override {
-		if (current_vec_pos == -1) {
-			// -1 means EndOfVec
-			// move to next tuple try to match the comparsion
-			std::string bin_data{};
-			left_->nextTuple();
-			while (!left_->is_end()) {
-				bin_data = "p:";
-				auto left_rec = left_->Next();
-				for (auto fed_cond: fed_conds_) {
-					auto [is_left, it] = findByColMeta({fed_cond.lhs_col.tab_name, fed_cond.lhs_col.col_name});
-					if (it->type == TYPE_INT) {
-						auto hashed = std::hash<int>{}(*(int *) (left_rec->data + it->offset));
-						bin_data += std::string((char *) &hashed, sizeof(size_t));
-					} else if (it->type == TYPE_BIGINT) {
-						auto hashed = std::hash<int64_t>{}(*(int64_t *) (left_rec->data + it->offset));
-						bin_data += std::string((char *) &hashed, sizeof(size_t));
-					} else {
-						bin_data += std::string(left_rec->data + it->offset, it->len);
-					}
-				}
-				if (hash_table_.find(bin_data) == hash_table_.end())
-					left_->nextTuple();
-				else
-					break;
-			}
-			current_vec_pos = 0;
-			join_current_vec_it = hash_table_.find(bin_data);
-		}
-		if (left_->is_end()) {
-			return;
-		}
-		// not equal with -1
-		current_ = std::make_unique<RmRecord>(len_);
-		auto left_rec = left_->Next();
-		auto &right_rec = join_current_vec_it->second[current_vec_pos];
-		for (auto col: cols_) {
-			auto [is_left, it] = table_col_table[{col.tab_name, col.name}];
-			if (is_left) {
-				memcpy(current_->data + col.offset, left_rec->data + it->offset, it->len);
-			} else {
-				memcpy(current_->data + col.offset, right_rec->data + it->offset, it->len);
-			}
-		}
-		current_vec_pos++;
-		if (current_vec_pos == (long long) join_current_vec_it->second.size()) {
-			current_vec_pos = -1;
+		current_buffer_pos++;
+		if (current_buffer_pos == match_tuples.size()) {
+			match_tuples.clear();
+			getNextMatchVector();
+			current_buffer_pos = 0;
 		}
 	}
 
 	bool is_end() const override {
-		return left_->is_end();
+		return left_->is_end() && right_->is_end();
 	}
 
 	std::unique_ptr<RmRecord> Next() override {
-		return std::make_unique<RmRecord>(*current_.get());
+		return std::make_unique<RmRecord>(*match_tuples[current_buffer_pos]);
 	}
 
 	size_t tupleLen() const override {
 		return len_;
 	}
+
+	std::string getType() override { return "NestedLoopJoinExecutor"; };
+
 
 	Rid &rid() override { return _abstract_rid; }
 };
