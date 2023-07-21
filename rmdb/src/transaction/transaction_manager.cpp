@@ -12,6 +12,7 @@ See the Mulan PSL v2 for more details. */
 #include "record/rm_file_handle.h"
 #include "system/sm_manager.h"
 #include "transaction/transaction.h"
+#include "transaction/txn_defs.h"
 
 std::unordered_map<txn_id_t, Transaction *> TransactionManager::txn_map = {};
 
@@ -29,9 +30,10 @@ Transaction *TransactionManager::begin(Transaction *txn, LogManager *log_manager
 	// 4. 返回当前事务指针
 	if (txn != nullptr)
 		return txn;
-	auto txn_id = next_txn_id_ ++ ;
+	auto txn_id = next_txn_id_++;
 	auto new_txn = new Transaction(txn_id);
-	new_txn->set_start_ts(next_timestamp_ ++ );
+	new_txn->set_start_ts(next_timestamp_++);
+	new_txn->set_state(TransactionState::DEFAULT);
 	txn_map[txn_id] = new_txn;
 	return new_txn;
 }
@@ -105,7 +107,7 @@ void TransactionManager::abort(Transaction *txn, LogManager *log_manager) {
 	// todo: flush log file to disk
 	txn->set_state(TransactionState::ABORTED);
 }
-
+// insert rollback is delete
 void TransactionManager::rollback_insert(const std::string &tab_name_, const Rid &rid, Transaction *txn) {
 	auto tab_ = sm_manager_->db_.get_table(tab_name_);
 	auto rec = sm_manager_->fhs_.at(tab_name_).get()->get_record(rid, nullptr);
@@ -125,7 +127,7 @@ void TransactionManager::rollback_insert(const std::string &tab_name_, const Rid
 	// delete from disk
 	fh_->delete_record(rid, nullptr);
 }
-
+// delete rollback is insert
 void TransactionManager::rollback_delete(const std::string &tab_name_, const Rid &rid, const RmRecord &rec, Transaction *txn) {
 	auto tab_ = sm_manager_->db_.get_table(tab_name_);
 	auto fh_ = sm_manager_->fhs_.at(tab_name_).get();
@@ -145,6 +147,7 @@ void TransactionManager::rollback_delete(const std::string &tab_name_, const Rid
 	fh_->insert_record(rid, rec.data);
 }
 
+// update -> update back (delete then insert)
 void TransactionManager::rollback_update(const std::string &tab_name_, const Rid &rid, const RmRecord &record, Transaction *txn) {
 	auto tab_ = sm_manager_->db_.get_table(tab_name_);
 	auto rec = sm_manager_->fhs_.at(tab_name_).get()->get_record(rid, nullptr);

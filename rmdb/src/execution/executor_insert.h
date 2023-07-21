@@ -53,6 +53,8 @@ public:
 				memcpy(rec.data + col.offset, val.raw->data, col.len);
 			} else if (col.type == TYPE_BIGINT && val.type == TYPE_INT) {
 				*(int64_t *) (rec.data + col.offset) = val.int_val;
+			} else if (col.type == TYPE_FLOAT && val.type == TYPE_INT) {
+				*(double *) (rec.data + col.offset) = val.int_val;
 			} else {//type not equal && val is not TYPE_DATETIME
 				throw IncompatibleTypeError(coltype2str(col.type), coltype2str(val.type));
 			}
