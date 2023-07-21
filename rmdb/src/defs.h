@@ -126,16 +126,16 @@ enum AggregateDir {  //聚合函数的类型
 };
 
 struct AggregateCmp {
-	int val_int; 
-	double val_double; 
-	std::string val_str; 
-	long long sum_int;
-	double sum_double;  
-	int count{}; 
-	bool is_first; 
-	ColType col_type; 
+	int val_int {}; 
+	double val_double {}; 
+	std::string val_str {}; 
+	long long sum_int {};
+	double sum_double {};  
+	int count {}; 
+	bool is_first {true}; 
+	ColType col_type {}; 
 
-	AggregateCmp() :is_first(true) { }
+	AggregateCmp() = default;
 
 	std::string get_val(AggregateDir type) {
 		switch (type) {
