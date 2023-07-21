@@ -27,6 +27,8 @@ public:
 
 	virtual const std::vector<ColMeta> &cols() = 0;
 
+	virtual void set_all_cols(std::vector<ColMeta>) {}; 
+
 	virtual std::string getType() { return "AbstractExecutor"; };
 
 	virtual void beginTuple(){};

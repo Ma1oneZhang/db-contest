@@ -174,7 +174,7 @@ public:
 			// delete from disk
 			fh_->delete_record(rid, context_);
 			// if the transtions is open
-			if (context_->txn_->get_txn_mode()) {
+			if (context_->txn_->get_state() == TransactionState::DEFAULT) {
 				// add it to the deleted_records
 				WriteRecord *deleteRecord = new WriteRecord{WType::DELETE_TUPLE, tab_name_, rid, *rec};
 				context_->txn_->append_write_record(deleteRecord);

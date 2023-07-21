@@ -207,12 +207,18 @@ public:
 		left_ = std::move(left);
 		right_ = std::move(right);
 		len_ = left_->tupleLen() + right_->tupleLen();
-		cols_ = left_->cols();
+		cols_ = left_->cols();  //以左表为outer table
 		auto right_cols = right_->cols();
 		for (auto &col: right_cols) {
 			col.offset += left_->tupleLen();
 		}
 		cols_.insert(cols_.end(), right_cols.begin(), right_cols.end());
+
+		//设置左右实际的cols
+		left_->set_all_cols(cols_); 
+		right_->set_all_cols(cols_); 
+
+
 		fed_conds_ = std::move(conds);
 		is_join = (fed_conds_.size() > 0);
 		for (auto &cond: fed_conds_) {
@@ -242,6 +248,7 @@ public:
 	}
 
 	void beginTuple() override {
+		// 
 		left_->beginTuple();
 		if (left_->is_end()) {
 			return;

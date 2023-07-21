@@ -52,6 +52,7 @@ void TransactionManager::commit(Transaction *txn, LogManager *log_manager) {
 	// 5. 更新事务状态
 	if (txn == nullptr)
 		return;
+	txn->set_state(TransactionState::COMMITTED);
 	// commit all write operations
 	auto write_set = txn->get_write_set();
 	// release all locks
@@ -64,7 +65,6 @@ void TransactionManager::commit(Transaction *txn, LogManager *log_manager) {
 	lock_set->clear();
 	// todo: flush log file to disk
 	// update the txn status
-	txn->set_state(TransactionState::COMMITTED);
 }
 
 /**
@@ -81,7 +81,8 @@ void TransactionManager::abort(Transaction *txn, LogManager *log_manager) {
 	// 5. 更新事务状态
 	if (txn == nullptr)
 		return;
-	txn->set_txn_mode(false);
+	txn->set_state(TransactionState::ABORTED);
+	// txn->set_txn_mode(false);
 	auto write_set = txn->get_write_set();
 	while (!write_set->empty()) {
 		switch (write_set->back()->GetWriteType()) {
@@ -105,7 +106,6 @@ void TransactionManager::abort(Transaction *txn, LogManager *log_manager) {
 	write_set->clear();
 	lock_set->clear();
 	// todo: flush log file to disk
-	txn->set_state(TransactionState::ABORTED);
 }
 // insert rollback is delete
 void TransactionManager::rollback_insert(const std::string &tab_name_, const Rid &rid, Transaction *txn) {

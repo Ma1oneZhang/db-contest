@@ -23,6 +23,7 @@ See the Mulan PSL v2 for more details. */
 #include <memory>
 #include <type_traits>
 #include <unordered_map>
+#include <vector>
 
 class SeqScanExecutor : public AbstractExecutor {
 private:
@@ -30,6 +31,7 @@ private:
 	std::string tab_name_;            // 表的名称
 	std::vector<Condition> conds_;    // scan的条件
 	std::vector<ColMeta> cols_;       // scan后生成的记录的字段
+	std::vector<ColMeta> all_cols;    //在nestedloop中的所有cols
 	size_t len_;                      // scan后生成的每条记录的长度
 	std::vector<Condition> fed_conds_;// 同conds_，两个字段相同
 	std::unordered_map<CompOp, CompOp> swapOp = {
@@ -46,7 +48,11 @@ private:
 
 	bool checkCondition(const std::unique_ptr<RmRecord> &rec) {
 		for (auto &cond: conds_) {
-			auto col = get_col(cols_, cond.lhs_col);
+			auto cols = cols_; 
+			if (all_cols.size()) {
+				cols = all_cols;
+			}
+			auto col = get_col(cols, cond.lhs_col);
 			auto lhs = rec->data + col->offset;
 			char *rhs;
 			ColType rhs_type;
@@ -54,7 +60,7 @@ private:
 				rhs_type = cond.rhs_val.type;
 				rhs = cond.rhs_val.raw->data;
 			} else {
-				auto rhs_col = get_col(cols_, cond.rhs_col);
+				auto rhs_col = get_col(cols, cond.rhs_col);
 				rhs_type = rhs_col->type;
 				rhs = rec->data + rhs_col->offset;
 			}
@@ -188,6 +194,10 @@ public:
 	}
 
 	std::string getType() override { return "SeqScanExecutor"; };
+
+	void set_all_cols(std::vector<ColMeta> col) override {
+		all_cols = col; 
+	}
 
 	Rid &rid() override { return rid_; }
 };

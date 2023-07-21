@@ -129,9 +129,9 @@ struct AggregateCmp {
 	int val_int; 
 	double val_double; 
 	std::string val_str; 
-	int sum_int;
+	long long sum_int;
 	double sum_double;  
-	int count; 
+	int count{}; 
 	bool is_first; 
 	ColType col_type; 
 

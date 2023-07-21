@@ -266,7 +266,13 @@ void Analyze::get_clause(const std::vector<std::shared_ptr<ast::BinaryExpr>> &sv
 			cond.is_rhs_val = true;
 
 			//get the col type;
-			auto &lhs_tab = sm_manager_->db_.get_table(tab_names[0]);
+			std::string table_name; 
+			if (cond.lhs_col.tab_name == "") {
+				table_name = tab_names.front(); //没有表名的时候
+			} else {
+				table_name = cond.lhs_col.tab_name;
+			}
+			auto &lhs_tab = sm_manager_->db_.get_table(table_name);
 			auto lhs_col = lhs_tab.get_col(cond.lhs_col.col_name);
 			auto lhs_type = lhs_col->type;
 

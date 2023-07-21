@@ -25,7 +25,8 @@ extern std::atomic<bool> enable_logging;
 
 /** If ENABLE_LOGGING is true, the log should be flushed to disk every LOG_TIMEOUT. */
 extern std::chrono::duration<int64_t> log_timeout;
-
+static std::string SQL_TEST_FILE_PATH = "/home/hl/sql/db-contest/rmdb/build/sql/test_join.sql";
+// static std::string SQL_TEST_FILE_PATH = "/home/hl/sql/db-contest/rmdb/build/sql/test_small.sql";
 static constexpr int INVALID_FRAME_ID = -1;   // invalid frame id
 static constexpr int INVALID_PAGE_ID = -1;    // invalid page id
 static constexpr int INVALID_TXN_ID = -1;     // invalid transaction id

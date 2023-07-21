@@ -80,6 +80,8 @@ struct TabMeta {
 	TabMeta(const TabMeta &other) {
 		name = other.name;
 		for (auto col: other.cols) cols.push_back(col);
+		for (auto idx: other.indexes) indexes.push_back(idx);
+		for (auto agg: other.aggregates) aggregates.push_back(agg);
 	}
 
 
