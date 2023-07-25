@@ -9,6 +9,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include "lock_manager.h"
+#include <shared_mutex>
 
 /**
  * @description: 申请行级共享锁
@@ -41,8 +42,20 @@ bool LockManager::lock_exclusive_on_record(Transaction* txn, const Rid& rid, int
  * @param {int} tab_fd 目标表的fd
  */
 bool LockManager::lock_shared_on_table(Transaction* txn, int tab_fd) {
-    
-    return true;
+    auto lock = std::unique_lock<std::mutex>(latch_);
+    auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
+
+    auto &rwlock = lock_table_[lock_data_id]; 
+    if (rwlock.num >= 0) {
+        rwlock.num ++ ; 
+        rwlock.group_lock_mode_ = GroupLockMode::S; 
+        return true; 
+    }
+    else {
+        throw TransactionAbortException(txn->get_transaction_id(), AbortReason::GET_S); 
+    }
+
+    return true; 
 }
 
 /**
@@ -52,8 +65,20 @@ bool LockManager::lock_shared_on_table(Transaction* txn, int tab_fd) {
  * @param {int} tab_fd 目标表的fd
  */
 bool LockManager::lock_exclusive_on_table(Transaction* txn, int tab_fd) {
+    auto lock = std::unique_lock<std::mutex>(latch_);
+    auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
+
+    auto &rwlock = lock_table_[lock_data_id]; 
+    if (rwlock.num == 0) {
+        rwlock.num -- ; 
+        rwlock.group_lock_mode_ = GroupLockMode::X; 
+        return true; 
+    }
+    else {
+        throw TransactionAbortException(txn->get_transaction_id(), AbortReason::GET_X); 
+    }
     
-    return true;
+    return true; 
 }
 
 /**
@@ -85,6 +110,12 @@ bool LockManager::lock_IX_on_table(Transaction* txn, int tab_fd) {
  * @param {LockDataId} lock_data_id 要释放的锁ID
  */
 bool LockManager::unlock(Transaction* txn, LockDataId lock_data_id) {
-   
-    return true;
+    auto &rwlock = lock_table_[lock_data_id]; 
+    rwlock.num ++ ; 
+    if ((rwlock.num == -1 && rwlock.group_lock_mode_ == GroupLockMode::X)
+        || (rwlock.num >= 0 && rwlock.group_lock_mode_ == GroupLockMode::S)) {
+            rwlock.num ++ ; 
+            return true; 
+        }
+    return false; 
 }

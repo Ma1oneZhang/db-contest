@@ -117,7 +117,7 @@ struct std::hash<LockDataId> {
 };
 
 /* 事务回滚原因 */
-enum class AbortReason { LOCK_ON_SHIRINKING = 0, UPGRADE_CONFLICT, DEADLOCK_PREVENTION };
+enum class AbortReason { LOCK_ON_SHIRINKING = 0, UPGRADE_CONFLICT, DEADLOCK_PREVENTION , GET_S, GET_X};
 
 /* 事务回滚异常，在rmdb.cpp中进行处理 */
 class TransactionAbortException : public std::exception {
@@ -145,7 +145,12 @@ class TransactionAbortException : public std::exception {
             case AbortReason::DEADLOCK_PREVENTION: {
                 return "Transaction " + std::to_string(txn_id_) + " aborted for deadlock prevention\n";
             } break;
-
+            case AbortReason::GET_S: {
+                return "Transaction " + std::to_string(txn_id_) + " aborted for get S\n";
+            } break; 
+            case AbortReason::GET_X: {
+                return "Transaction " + std::to_string(txn_id_) + " aborted for get X\n";
+            } break; 
             default: {
                 return "Transaction aborted\n";
             } break;
