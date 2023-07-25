@@ -317,7 +317,7 @@ public:
 		for (size_t i = 0; i < updated_records_.size(); i++) {
 			fh_->insert_record(rids[i], updated_records_[i]->data);
 		}
-		if (context_->txn_->get_txn_mode()) {
+		if (context_->txn_->get_state() == TransactionState::DEFAULT) {
 			// add it to the deleted_records
 			for (size_t i = 0; i < updated_records_.size(); i++) {
 				WriteRecord *wrec = new WriteRecord(WType::UPDATE_TUPLE, tab_name_, rids_[i], *original_records_[i]);

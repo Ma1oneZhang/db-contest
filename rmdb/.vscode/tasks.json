@@ -23,12 +23,12 @@
         {
             "label": "TestWithoutCompile", // 无预编译版, 只删除之前的数据库, 
             "type": "shell",
-            "command": "cd build && rm -rf test",
+            "command": "cd build",
         },
         {
             "label": "TestWithCompile", //有预编译, 有修改之后可以用这个版本
             "type": "shell",
-            "command": "cd build && rm -rf test && make sql_test -j100",
+            "command": "cd build && make -j100",
             "group": {
                 "kind": "build",
                 "isDefault": true
