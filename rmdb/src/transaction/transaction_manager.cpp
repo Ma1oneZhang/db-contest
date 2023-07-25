@@ -9,6 +9,9 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include "transaction_manager.h"
+#include "common/context.h"
+#include "errors.h"
+#include "execution/executor_delete.h"
 #include "record/rm_file_handle.h"
 #include "system/sm_manager.h"
 #include "transaction/transaction.h"

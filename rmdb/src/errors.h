@@ -174,3 +174,8 @@ class DuplicateKeyError : public RMDBError {
 public:
 	DuplicateKeyError(const std::string &msg) : RMDBError(msg) {}
 };
+
+class TransactionError : public RMDBError {
+public:
+	TransactionError(const std::string &msg) : RMDBError(msg) {}
+};

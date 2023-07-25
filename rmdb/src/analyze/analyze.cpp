@@ -15,8 +15,8 @@ See the Mulan PSL v2 for more details. */
 #include "parser/ast.h"
 #include "utils/log.h"
 #include <memory>
-#include <unordered_map>
 #include <set>
+#include <unordered_map>
 #include <vector>
 /**
  * @description: 分析器，进行语义分析和查询重写，需要检查不符合语义规定的部分
@@ -38,41 +38,40 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 		std::vector<ColMeta> all_cols;
 		get_all_cols(query->tables, all_cols);
 
-		if (x->has_aggregate) { //当前是聚合查询
-			auto &aggregates = x->aggregates; 
-			std::set<TabCol> sel_cols; //所有需要选择的列
+		if (x->has_aggregate) {//当前是聚合查询
+			auto &aggregates = x->aggregates;
+			std::set<TabCol> sel_cols;//所有需要选择的列
 
 			//将所有的aggregate都放入到ColMeta中的第一个袁术
-			auto &bas_aggre = sm_manager_->db_.get_table(query->tables.front()).get_aggregates(); 
-			bas_aggre.clear();  //将其清空, 之前的元素
+			auto &bas_aggre = sm_manager_->db_.get_table(query->tables.front()).get_aggregates();
+			bas_aggre.clear();//将其清空, 之前的元素
 
 			// 将所有aggregate情况加入到ColMeta中
-			for (size_t i = 0; i < all_cols.size(); i ++ ) {
-				auto &col = all_cols[i]; 
-				for (auto aggregate : aggregates) {
+			for (size_t i = 0; i < all_cols.size(); i++) {
+				auto &col = all_cols[i];
+				for (auto aggregate: aggregates) {
 					TabCol sel_col = {.tab_name = col.tab_name, .col_name = col.name};
 
 					if (!aggregate->cols.size() && i == 0) {
 						TabCol sel_col = {.tab_name = all_cols.front().tab_name, .col_name = all_cols.front().name};
-						aggregate->cols.push_back(std::make_shared<ast::Col>(sel_col.tab_name, sel_col.col_name)); 
-						sel_cols.insert(sel_col); 
-						bas_aggre.push_back(aggregate); 
-					} else if (aggregate->cols.size() 
-							// && aggregate->cols.front()->tab_name == sel_col.tab_name 
-							&& aggregate->cols.front()->col_name == sel_col.col_name) {
+						aggregate->cols.push_back(std::make_shared<ast::Col>(sel_col.tab_name, sel_col.col_name));
+						sel_cols.insert(sel_col);
+						bas_aggre.push_back(aggregate);
+					} else if (aggregate->cols.size()
+										 // && aggregate->cols.front()->tab_name == sel_col.tab_name
+										 && aggregate->cols.front()->col_name == sel_col.col_name) {
 
-						bas_aggre.push_back(std::move(aggregate)); 
-						sel_cols.insert(sel_col); 
+						bas_aggre.push_back(std::move(aggregate));
+						sel_cols.insert(sel_col);
 					}
 				}
 			}
 			// 特判COUNT(*) 情况
-			for (auto &aggregate : aggregates) {
+			for (auto &aggregate: aggregates) {
 				if (aggregate->cols.size() == 0) {
-
 				}
 			}
-			query->cols = std::vector<TabCol>(sel_cols.begin(), sel_cols.end()); 
+			query->cols = std::vector<TabCol>(sel_cols.begin(), sel_cols.end());
 		} else {
 			// 处理target list，再target list中添加上表名，例如 a.id
 			for (auto &sv_sel_col: x->cols) {
@@ -93,9 +92,6 @@ std::shared_ptr<Query> Analyze::do_analyze(std::shared_ptr<ast::TreeNode> parse)
 				}
 			}
 		}
-
-
-
 
 
 		std::unordered_map<std::string, std::vector<std::string>> cnt;
@@ -260,15 +256,26 @@ void Analyze::get_clause(const std::vector<std::shared_ptr<ast::BinaryExpr>> &sv
 	for (auto &expr: sv_conds) {
 		Condition cond;
 		cond.lhs_col = {.tab_name = expr->lhs->tab_name, .col_name = expr->lhs->col_name};
-
 		cond.op = convert_sv_comp_op(expr->op);
 		if (auto rhs_val = std::dynamic_pointer_cast<ast::Value>(expr->rhs)) {
 			cond.is_rhs_val = true;
 
 			//get the col type;
-			std::string table_name; 
+			std::string table_name;
 			if (cond.lhs_col.tab_name == "") {
-				table_name = tab_names.front(); //没有表名的时候
+				for (auto &tab_name: tab_names) {
+					auto &tab = sm_manager_->db_.get_table(tab_name);
+					for (auto &col: tab.cols) {
+						if (col.name == cond.lhs_col.col_name) {
+							table_name = col.tab_name;
+							break;
+						}
+					}
+				}
+				if (table_name == "") {
+					throw ColumnNotFoundError(cond.lhs_col.col_name);
+				}
+				// table_name = tab_names.front(); //没有表名的时候
 			} else {
 				table_name = cond.lhs_col.tab_name;
 			}

@@ -9,6 +9,7 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #pragma once
+#include "common/context.h"
 #include "defs.h"
 #include "execution_defs.h"
 #include "execution_manager.h"
@@ -76,7 +77,7 @@ public:
 			}
 		}
 		// Insert into record file
-		rid_ = fh_->insert_record(rec.data, context_);
+		rid_ = fh_->insert_record(rec.data, context_); //插入数据的位置
 
 		// Insert into index
 		for (size_t i = 0; i < tab_.indexes.size(); ++i) {

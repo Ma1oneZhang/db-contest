@@ -226,10 +226,20 @@ public:
 						}
 					}
 				}
+
+				//更新事务
+				if (context_->txn_->get_txn_mode()) {
+						auto delete_record = RmRecord(original_records_.back()->size);
+						memcpy(delete_record.data, original_records_.back()->data, original_records_.back()->size); //复制执行的命令
+						auto write_record = new WriteRecord(WType::UPDATE_TUPLE, tab_name_, scan->rid(), std::move(delete_record));
+						context_->txn_->append_write_record(write_record); 
+				}
 				updated_records_.emplace_back(std::move(rec));
 				rids.push_back(scan->rid());
 			}
 		}
+
+
 		if (tab_.indexes.size() > 0) {
 			// means need unique check
 			std::unordered_set<std::string> vailated_records;
@@ -325,6 +335,9 @@ public:
 			}
 		}
 		is_executed = true;
+
+
+
 		return nullptr;
 	}
 	bool is_end() const override {
