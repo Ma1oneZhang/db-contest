@@ -156,7 +156,7 @@ private:
 	std::mutex mu_of_match_tuple;
 	std::unique_ptr<ThreadPool> tp;
 	void getNextMatchVector() {
-		while (match_tuples.size() == 0 && !(left_->is_end() && right_->is_end())) {
+		while (match_tuples.size() == 0 && !right_->is_end()) {
 			getNextBlockBuffer();
 			// means scan over
 			if (buffer_vec_.size() == 0) {
@@ -189,7 +189,7 @@ private:
 			std::vector<RmRecord *> left_buffer;
 			for (size_t i = 0; i < buffer_vec_.size(); i++) {
 				left_buffer.push_back(buffer_vec_[i].get());
-				if (i != 0 && (i % 32 == 0 || i == buffer_vec_.size() - 1)) {
+				if (i == buffer_vec_.size() - 1 || (i % 32 == 0 && i != 0)) {
 					tasks.emplace_back(tp->submit(getNextMatchTuple, left_buffer, right_buffer.get()));
 					left_buffer.clear();
 				}
@@ -207,7 +207,7 @@ public:
 		left_ = std::move(left);
 		right_ = std::move(right);
 		len_ = left_->tupleLen() + right_->tupleLen();
-		cols_ = left_->cols();  //以左表为outer table
+		cols_ = left_->cols();//以左表为outer table
 		auto right_cols = right_->cols();
 		for (auto &col: right_cols) {
 			col.offset += left_->tupleLen();
@@ -217,8 +217,8 @@ public:
 		//设置左右实际的cols
 		auto prev_cols = right_->cols();
 		prev_cols.insert(prev_cols.end(), left_->cols().begin(), left_->cols().end());
-		left_->set_all_cols(prev_cols); 
-		right_->set_all_cols(prev_cols); 
+		left_->set_all_cols(prev_cols);
+		right_->set_all_cols(prev_cols);
 
 
 		fed_conds_ = std::move(conds);
@@ -250,16 +250,11 @@ public:
 	}
 
 	void beginTuple() override {
-		// 
 		left_->beginTuple();
-		if (left_->is_end()) {
-			return;
-		}
 		right_->beginTuple();
-		if (right_->is_end()) {
+		if (left_->is_end() || right_->is_end()) {
 			return;
 		}
-		getNextMatchVector();
 		nextTuple();
 	}
 
@@ -273,7 +268,7 @@ public:
 	}
 
 	bool is_end() const override {
-		return left_->is_end() && right_->is_end();
+		return buffer_vec_.size() == 0 && right_->is_end();
 	}
 
 	std::unique_ptr<RmRecord> Next() override {
