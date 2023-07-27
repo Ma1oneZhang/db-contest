@@ -189,7 +189,7 @@ private:
 			std::vector<RmRecord *> left_buffer;
 			for (size_t i = 0; i < buffer_vec_.size(); i++) {
 				left_buffer.push_back(buffer_vec_[i].get());
-				if (i == buffer_vec_.size() - 1 || (i % 32 == 0 && i != 0)) {
+				if (i == buffer_vec_.size() - 1 || (i % 128 == 0 && i != 0)) {
 					tasks.emplace_back(tp->submit(getNextMatchTuple, left_buffer, right_buffer.get()));
 					left_buffer.clear();
 				}
@@ -231,8 +231,8 @@ public:
 				}
 			}
 		}
-		// 20 thread maybe enough
-		tp = std::make_unique<ThreadPool>(20);
+		// 5 thread maybe enough
+		tp = std::make_unique<ThreadPool>(5);
 		tp->init();
 		for (size_t i = 0; i < left_->cols().size(); i++) {
 			const auto &vec = left_->cols();
@@ -260,7 +260,7 @@ public:
 
 	void nextTuple() override {
 		current_buffer_pos++;
-		if (current_buffer_pos == match_tuples.size()) {
+		if (current_buffer_pos == (int64_t)match_tuples.size()) {
 			match_tuples.clear();
 			getNextMatchVector();
 			current_buffer_pos = 0;

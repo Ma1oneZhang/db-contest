@@ -159,6 +159,7 @@ public:
 		is_executed = false;
 	}
 	std::unique_ptr<RmRecord> Next() override {
+		context_->lock_mgr_->lock_exclusive_on_table(context_->txn_, sm_manager_->fhs_[tab_name_]->GetFd());
 		// scan all table
 		std::vector<Rid> rids;
 		std::vector<std::unique_ptr<RmRecord>> original_records_;
@@ -167,8 +168,8 @@ public:
 			auto rec = fh_->get_record(scan->rid(), nullptr);
 			// check every record
 			if (checkCondition(rec)) {
-				auto original_rec = std::make_unique<RmRecord>(*rec);
-				original_records_.emplace_back(std::move(original_rec));
+				// copy construation
+				original_records_.emplace_back(std::make_unique<RmRecord>(*rec));
 				// make set_clause apply on it
 				for (auto set_clause: set_clauses_) {
 					auto col = tab_.get_col(set_clause.lhs.col_name);
@@ -250,11 +251,9 @@ public:
 						}
 				}
 				updated_records_.emplace_back(std::move(rec));
-				rids.push_back(scan->rid());
+				rids.emplace_back(scan->rid());
 			}
 		}
-
-
 		if (tab_.indexes.size() > 0) {
 			// means need unique check
 			std::unordered_set<std::string> vailated_records;
@@ -339,18 +338,15 @@ public:
 				}
 			}
 		}
+
 		for (size_t i = 0; i < updated_records_.size(); i++) {
 			fh_->insert_record(rids[i], updated_records_[i]->data);
-		}
-		if (context_->txn_->get_state() == TransactionState::DEFAULT) {
-			// add it to the deleted_records
-			for (size_t i = 0; i < updated_records_.size(); i++) {
-				WriteRecord *wrec = new WriteRecord(WType::UPDATE_TUPLE, tab_name_, rids_[i], *original_records_[i]);
-				context_->txn_->append_write_record(wrec);
-			}
+			//更新事务
+			auto write_record =
+				new WriteRecord(WType::UPDATE_TUPLE, tab_name_, rids[i], *original_records_[i]);
+			context_->txn_->append_write_record(write_record);
 		}
 		is_executed = true;
-
 
 
 		return nullptr;

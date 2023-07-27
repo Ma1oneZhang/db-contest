@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "ix_scan.h"
 #include "storage/page.h"
 #include <cassert>
+#include <mutex>
 
 /**
  * @brief 在当前node中查找第一个>=target的key_idx
@@ -370,7 +371,7 @@ page_id_t IxIndexHandle::insert_entry(const char *key, const Rid &value, Transac
 	// 2. 在该叶子节点中插入键值对
 	// 3. 如果结点已满，分裂结点，并把新结点的相关信息插入父节点
 	// 提示：记得unpin page；若当前叶子节点是最右叶子节点，则需要更新file_hdr_.last_leaf；记得处理并发的上锁
-
+	std::scoped_lock latch{root_latch_};
 	auto [node, _] = find_leaf_page(key, Operation::FIND, transaction);
 	if (node->is_root_page() && node->get_size() == 0) {
 		node->set_prev_leaf(-1);
@@ -417,6 +418,7 @@ bool IxIndexHandle::delete_entry(const char *key, Transaction *transaction) {
 	// 2. 在该叶子结点中删除键值对
 	// 3. 如果删除成功需要调用CoalesceOrRedistribute来进行合并或重分配操作，并根据函数返回结果判断是否有结点需要删除
 	// 4. 如果需要并发，并且需要删除叶子结点，则需要在事务的delete_page_set中添加删除结点的对应页面；记得处理并发的上锁
+	std::scoped_lock latch{root_latch_};
 	auto [node, _] = find_leaf_page(key, Operation::DELETE, transaction);
 	auto pos = node->lower_bound(key);
 	if (ix_compare(key, node->get_key(pos), file_hdr_->col_types_, file_hdr_->col_lens_) == 0) {
@@ -633,6 +635,7 @@ Rid IxIndexHandle::get_rid(const Iid &iid) const {
  * 可用*(int *)key转换回去
  */
 Iid IxIndexHandle::lower_bound(const char *key) {
+	std::scoped_lock latch{root_latch_};
 	auto [node, _] = find_leaf_page(key, Operation::FIND, nullptr);
 	auto pos = node->lower_bound(key);
 	buffer_pool_manager_->unpin_page(node->get_page_id(), false);
@@ -646,6 +649,7 @@ Iid IxIndexHandle::lower_bound(const char *key) {
  * @return Iid
  */
 Iid IxIndexHandle::upper_bound(const char *key) {
+	std::scoped_lock latch{root_latch_};
 	auto [node, _] = find_leaf_page(key, Operation::FIND, nullptr);
 	auto pos = node->upper_bound(key);
 	auto page_no = node->get_page_no();

@@ -163,6 +163,9 @@ void *client_handler(void *sock_fd) {
 					outfile.open("output.txt", std::ios::out | std::ios::app);
 					outfile << "failure\n";
 					outfile.close();
+
+					// 回滚事务
+					txn_manager->abort(context->txn_, log_manager.get());
 				}
 			}
 		} else {

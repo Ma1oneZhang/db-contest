@@ -45,6 +45,7 @@ public:
 	};
 
 	std::unique_ptr<RmRecord> Next() override {
+		context_->lock_mgr_->lock_exclusive_on_table(context_->txn_, sm_manager_->fhs_[tab_name_]->GetFd());
 		// Make record buffer
 		RmRecord rec(fh_->get_file_hdr().record_size);
 		for (size_t i = 0; i < values_.size(); i++) {
@@ -78,7 +79,7 @@ public:
 			}
 		}
 		// Insert into record file
-		rid_ = fh_->insert_record(rec.data, context_); //插入数据的位置
+		rid_ = fh_->insert_record(rec.data, context_);//插入数据的位置
 
 		// Insert into index
 		for (size_t i = 0; i < tab_.indexes.size(); ++i) {
