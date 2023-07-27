@@ -10,6 +10,7 @@ See the Mulan PSL v2 for more details. */
 
 #include "lock_manager.h"
 #include "common/config.h"
+#include "transaction/txn_defs.h"
 #include <algorithm>
 #include <shared_mutex>
 
@@ -47,6 +48,10 @@ bool LockManager::lock_shared_on_table(Transaction *txn, int tab_fd) {
 	std::scoped_lock mu{latch_};
 	auto lock_data_id = LockDataId(tab_fd, LockDataType::TABLE);
 	auto &rwlock = lock_table_[lock_data_id];
+	if (abort_set.count(txn->get_transaction_id())) {
+		abort_set.erase(txn->get_transaction_id());
+		throw TransactionAbortException(txn->get_transaction_id(), AbortReason::GET_S);
+	}
 	// if not the exclusive lock
 	// The rwlock will not be the lock
 	if (rwlock.num >= 0) {
@@ -95,6 +100,15 @@ bool LockManager::lock_exclusive_on_table(Transaction *txn, int tab_fd) {
 	// we throw error for no-wait
 	if (rwlock.first_hold_shared != txn->get_transaction_id() && rwlock.first_hold_shared != -1) {
 		throw TransactionAbortException(txn->get_transaction_id(), AbortReason::GET_X);
+	}
+	if (rwlock.num > 0 && rwlock.num != 1) {
+		throw TransactionAbortException(txn->get_transaction_id(), AbortReason::GET_X);
+	}
+	for (auto req: rwlock.request_queue_) {
+		if (req.txn_id_ == txn->get_transaction_id()) {
+			continue;
+		}
+		abort_set.insert(req.txn_id_);
 	}
 	rwlock.request_queue_.clear();
 	rwlock.num = -1;
