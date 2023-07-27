@@ -44,5 +44,5 @@ private:
     BufferPoolManager* buffer_pool_manager_;                        // 对页面进行读写
     SmManager* sm_manager_;                                         // 访问数据库元数据
     TransactionManager* txn_manager_; 
-    std::unordered_map<txn_id_t, int> active_txn; 
+    std::map<txn_id_t, int> active_txn; 
 };

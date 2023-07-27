@@ -103,7 +103,7 @@ void RecoveryManager::undo() {
         auto file_name = "undo_recovery_" + std::to_string(txn) + ".log"; 
         buffer_.offset_ = 0; 
         bool is_first = true; 
-        while (disk_manager_->read_log(buffer_.buffer_, log_len, buffer_.offset_, file_name) != -1)
+        while (disk_manager_->read_log(buffer_.buffer_, log_len, buffer_.offset_, file_name) > 0)
         {
             LogRecord log_rec; 
             log_rec.deserialize(buffer_.buffer_); 
@@ -140,15 +140,15 @@ void RecoveryManager::undo() {
                     // throw UndoError("多出的 ABORT COMMIT类型"); 
                 }break; 
                 
-                //更新offset
-                buffer_.offset_ += log_len; 
-                log_len = log_rec.log_tot_len_; 
             }
+            //更新offset
+            buffer_.offset_ += log_len; 
+            log_len = log_rec.log_tot_len_; 
 
             //收尾工作, 删除所有的日志文件
             // auto &path2fd = sm_manager_.
-            disk_manager_->destroy_file(file_name); 
         }  
+        disk_manager_->destroy_file(file_name); 
     }
     std::cout << "undo compllite\n"; 
 }
