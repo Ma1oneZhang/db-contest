@@ -40,7 +40,7 @@ void LogManager::flush_log_to_disk(txn_id_t txn) {
     std::unique_lock<std::mutex> latch(latch_); 
     disk_manager_->write_log(log_buffer_.buffer_, log_buffer_.offset_);
     // set_activa_txn_(txn, log_buffer_.offset_); //更新事件得长度
-    log_buffer_.offset_ = 0; 
+    // log_buffer_.offset_ = 0; 
     // set_persist_lsn_(global_lsn_); //持久化到lsn
     
     if (txn2log_file.count(txn) && log_buffer_.offset_ > 0) {

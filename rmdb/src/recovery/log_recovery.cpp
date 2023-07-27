@@ -49,49 +49,49 @@ void RecoveryManager::analyze() {
  * @description: 重做所有未落盘的操作
  */
 void RecoveryManager::redo() {
-    // LogRecord log_rec;
-    // int offset = 0;
-    // int tot_len = 20;  
-    // int begin_len = 20;  
-    // int ret = disk_manager_->read_log(buffer_.buffer_, begin_len, offset);
-    // if (ret == 0) return ; 
-    // log_rec.deserialize(buffer_.buffer_); //begin;
+    LogRecord log_rec;
+    int offset = 0;
+    int tot_len = 20;  
+    int begin_len = 20;  
+    int ret = disk_manager_->read_log(buffer_.buffer_, begin_len, offset);
+    if (ret == 0) return ; 
+    log_rec.deserialize(buffer_.buffer_); //begin;
 
-    // tot_len = log_rec.log_tot_len_; 
-    // // offset += log_rec.log_tot_len_; 
-    // while (disk_manager_->read_log(buffer_.buffer_, tot_len, offset) != -1) {
-    //     int cur_len = 20; //当前record的长度; 
-    //     switch (log_rec.log_type_) {
-    //         case LogType::INSERT: {
-    //             auto x = InsertLogRecord(); 
-    //             x.deserialize(buffer_.buffer_); 
-    //             txn_manager_->rollback_delete(x.table_name_, x.rid_, x.insert_value_, nullptr);
-    //             cur_len = x.log_tot_len_; 
-    //         }break; 
-    //         case LogType::DELETE: {
-    //             auto x = DeleteLogRecord(); 
-    //             x.deserialize(buffer_.buffer_);
-    //             txn_manager_->rollback_insert(x.table_name_, x.rid_, nullptr); 
-    //             cur_len = x.log_tot_len_; 
-    //         }break;
-    //         case LogType::UPDATE: {
-    //             auto x = UpdateLogRecord(); 
-    //             x.deserialize(buffer_.buffer_); 
-    //             txn_manager_->rollback_update(x.table_name_, x.update_rid_, x.old_value_, nullptr);
-    //             cur_len = x.log_tot_len_; 
-    //         }break; 
-    //         case LogType::begin: {
-    //             // cur_len += begin_len; 
-    //         }break;
-    //         default: { //abort, commit
-    //             // throw UndoError("多出的 ABORT COMMIT类型"); 
-    //         }break; 
-    //     }
-    //     offset += cur_len; //更新到下一个偏移量
-    //     disk_manager_->read_log(buffer_.buffer_, tot_len, offset); //找到下一个rec的头文件地址
-    //     log_rec.deserialize(buffer_.buffer_); //获取完头文件数据
-    //     tot_len = log_rec.log_tot_len_;  //获取整体长度
-    // }
+    tot_len = log_rec.log_tot_len_; 
+    // offset += log_rec.log_tot_len_; 
+    while (disk_manager_->read_log(buffer_.buffer_, tot_len, offset) != 0) {
+        int cur_len = 20; //当前record的长度; 
+        switch (log_rec.log_type_) {
+            case LogType::INSERT: {
+                auto x = InsertLogRecord(); 
+                x.deserialize(buffer_.buffer_); 
+                txn_manager_->insert(x.table_name_, x.rid_, x.insert_value_, nullptr);
+                cur_len = x.log_tot_len_; 
+            }break; 
+            case LogType::DELETE: {
+                auto x = DeleteLogRecord(); 
+                x.deserialize(buffer_.buffer_);
+                txn_manager_->rollback_insert(x.table_name_, x.rid_, nullptr); 
+                cur_len = x.log_tot_len_; 
+            }break;
+            case LogType::UPDATE: {
+                auto x = UpdateLogRecord(); 
+                x.deserialize(buffer_.buffer_); 
+                txn_manager_->rollback_update(x.table_name_, x.update_rid_, x.old_value_, nullptr);
+                cur_len = x.log_tot_len_; 
+            }break; 
+            case LogType::begin: {
+                // cur_len += begin_len; 
+            }break;
+            default: { //abort, commit
+                // throw UndoError("多出的 ABORT COMMIT类型"); 
+            }break; 
+        }
+        offset += cur_len; //更新到下一个偏移量
+        disk_manager_->read_log(buffer_.buffer_, tot_len, offset); //找到下一个rec的头文件地址
+        log_rec.deserialize(buffer_.buffer_); //获取完头文件数据
+        tot_len = log_rec.log_tot_len_;  //获取整体长度
+    }
 }
 
 
@@ -150,7 +150,5 @@ void RecoveryManager::undo() {
             disk_manager_->destroy_file(file_name); 
         }  
     }
-
-
     std::cout << "undo compllite\n"; 
 }

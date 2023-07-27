@@ -44,6 +44,7 @@ public:
 
 	void rollback_insert(const std::string &tab_name_, const Rid &rid, Transaction *txn);
 	void rollback_delete(const std::string &tab_name_, const Rid &rid, const RmRecord &rec, Transaction *txn);
+	void insert(const std::string &tab_name_, const Rid &rid, const RmRecord &rec, Transaction *txn);
 	void rollback_update(const std::string &tab_name, const Rid &rid, const RmRecord &record, Transaction *txn);
 
 	inline txn_id_t get_next_txn_id() { return next_txn_id_; }

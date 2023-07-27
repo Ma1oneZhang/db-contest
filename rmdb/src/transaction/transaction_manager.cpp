@@ -203,3 +203,23 @@ void TransactionManager::rollback_update(const std::string &tab_name_, const Rid
 		ih->insert_entry(key->data, rid, nullptr);
 	}
 }
+
+// delete rollback is insert
+void TransactionManager::insert(const std::string &tab_name_, const Rid &rid, const RmRecord &rec, Transaction *txn) {
+	auto tab_ = sm_manager_->db_.get_table(tab_name_);
+	auto fh_ = sm_manager_->fhs_.at(tab_name_).get();
+	// insert it back every index
+	auto rid_ = fh_->insert_record(rec.data, nullptr);
+	for (size_t i = 0; i < tab_.indexes.size(); ++i) {
+		const auto &index = tab_.indexes[i];
+		const auto ih = sm_manager_->ihs_.at(sm_manager_->get_ix_manager()->get_index_name(tab_name_, index.cols)).get();
+		const std::unique_ptr<RmRecord> key = std::make_unique<RmRecord>(index.col_tot_len);
+		int offset = 0;
+		for (size_t i = 0; i < index.col_num; ++i) {
+			memcpy(key->data + offset, rec.data + index.cols[i].offset, index.cols[i].len);
+			offset += index.cols[i].len;
+		}
+		ih->insert_entry(key->data, rid_, nullptr);
+	}
+	// write it to disk
+}
