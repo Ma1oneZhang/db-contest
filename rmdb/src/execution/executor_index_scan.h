@@ -192,6 +192,7 @@ public:
 		return cols_;
 	}
 	void beginTuple() override {
+		context_->lock_mgr_->lock_shared_on_table(context_->txn_, sm_manager_->fhs_[tab_name_]->GetFd());
 		lower_cmp_key_ = std::make_unique<RmRecord>(ix_handle_->get_idx_len());
 		upper_cmp_key_ = std::make_unique<RmRecord>(ix_handle_->get_idx_len());
 		std::sort(conds_.begin(), conds_.end(), [&](Condition &lhs, Condition &rhs) {

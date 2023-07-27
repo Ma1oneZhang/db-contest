@@ -48,7 +48,7 @@ private:
 
 	bool checkCondition(const std::unique_ptr<RmRecord> &rec) {
 		for (auto &cond: conds_) {
-			auto cols = cols_; 
+			auto cols = cols_;
 			if (all_cols.size()) {
 				cols = all_cols;
 			}
@@ -170,6 +170,7 @@ public:
 	// Init
 	void beginTuple() override {
 		scan_ = std::make_unique<RmScan>(fh_);
+		context_->lock_mgr_->lock_shared_on_table(context_->txn_, sm_manager_->fhs_[tab_name_]->GetFd());
 		rid_ = scan_->rid();
 		if (!is_end() && !checkCondition(fh_->get_record(rid_, nullptr))) {
 			nextTuple();
@@ -179,7 +180,7 @@ public:
 	void nextTuple() override {
 		for (scan_->next(); !scan_->is_end(); scan_->next()) {
 			rid_ = scan_->rid();
-			if (checkCondition(fh_->get_record(rid_, nullptr))) { //如果当前按记录不满足where条件, 跳过当前记录
+			if (checkCondition(fh_->get_record(rid_, nullptr))) {//如果当前按记录不满足where条件, 跳过当前记录
 				break;
 			}
 		}
@@ -196,7 +197,7 @@ public:
 	std::string getType() override { return "SeqScanExecutor"; };
 
 	void set_all_cols(std::vector<ColMeta> col) override {
-		all_cols = col; 
+		all_cols = col;
 	}
 
 	Rid &rid() override { return rid_; }

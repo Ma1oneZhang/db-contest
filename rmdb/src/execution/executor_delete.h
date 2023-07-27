@@ -157,7 +157,8 @@ public:
 	}
 	std::unique_ptr<RmRecord> Next() override {
 		std::vector<std::unique_ptr<RmRecord>> deleted_records;
-		for (auto rid : rids_) {
+		context_->lock_mgr_->lock_exclusive_on_table(context_->txn_, sm_manager_->fhs_[tab_name_]->GetFd());
+		for (auto rid: rids_) {
 			auto rec = fh_->get_record(rid, nullptr);
 			// delete it from every index
 			for (size_t i = 0; i < tab_.indexes.size(); ++i) {
@@ -173,12 +174,9 @@ public:
 			}
 			// delete from disk
 			fh_->delete_record(rid, context_);
-			// if the transtions is open
-			if (context_->txn_->get_state() == TransactionState::DEFAULT) {
-				// add it to the deleted_records
-				WriteRecord *deleteRecord = new WriteRecord{WType::DELETE_TUPLE, tab_name_, rid, *rec};
-				context_->txn_->append_write_record(deleteRecord);
-			}
+			// add it to the deleted_records
+			WriteRecord *deleteRecord = new WriteRecord{WType::DELETE_TUPLE, tab_name_, rid, *rec};
+			context_->txn_->append_write_record(deleteRecord);
 		}
 		is_executed = true;
 		return nullptr;

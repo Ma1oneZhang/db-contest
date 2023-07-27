@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 #include "system/sm_manager.h"
 #include "transaction/transaction.h"
 #include "transaction/txn_defs.h"
+#include <mutex>
 
 std::unordered_map<txn_id_t, Transaction *> TransactionManager::txn_map = {};
 
@@ -33,6 +34,7 @@ Transaction *TransactionManager::begin(Transaction *txn, LogManager *log_manager
 	// 4. 返回当前事务指针
 	if (txn != nullptr)
 		return txn;
+	std::scoped_lock latch{latch_};
 	auto txn_id = next_txn_id_++;
 	auto new_txn = new Transaction(txn_id);
 	new_txn->set_start_ts(next_timestamp_++);
@@ -53,6 +55,7 @@ void TransactionManager::commit(Transaction *txn, LogManager *log_manager) {
 	// 3. 释放事务相关资源，eg.锁集
 	// 4. 把事务日志刷入磁盘中
 	// 5. 更新事务状态
+	std::scoped_lock latch{latch_};
 	if (txn == nullptr)
 		return;
 	txn->set_state(TransactionState::COMMITTED);
@@ -82,6 +85,7 @@ void TransactionManager::abort(Transaction *txn, LogManager *log_manager) {
 	// 3. 清空事务相关资源，eg.锁集
 	// 4. 把事务日志刷入磁盘中
 	// 5. 更新事务状态
+	std::scoped_lock latch{latch_};
 	if (txn == nullptr)
 		return;
 	txn->set_state(TransactionState::ABORTED);
