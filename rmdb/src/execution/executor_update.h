@@ -345,6 +345,21 @@ public:
 			auto write_record =
 				new WriteRecord(WType::UPDATE_TUPLE, tab_name_, rids[i], *original_records_[i]);
 			context_->txn_->append_write_record(write_record);
+
+			if (context_->log_mgr_->get_enable_logging()) {
+				auto &txn = context_->txn_; 
+
+				auto rid = rids[i]; 
+				auto &new_rec = *updated_records_[i]; 
+				auto &old_rec = *original_records_[i]; 
+				auto log = UpdateLogRecord(txn->get_transaction_id(), txn->get_prev_lsn(), new_rec, old_rec, rid, tab_name_); 
+				txn->set_prev_lsn(context_->log_mgr_->add_log_to_buffer(&log)); //用完即释放
+				log.format_print(); 
+				if (context_->txn_->get_txn_mode() == true) {
+					context_->log_mgr_->flush_log_to_disk(txn->get_transaction_id());
+				}
+			}
+
 		}
 		is_executed = true;
 

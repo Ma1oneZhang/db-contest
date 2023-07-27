@@ -376,12 +376,13 @@ public:
         LogRecord::deserialize(src);  
         new_value_.Deserialize(src + OFFSET_LOG_DATA);
         int offset = OFFSET_LOG_DATA + new_value_.size + sizeof(int);
-        old_value_.Deserialize(src + OFFSET_LOG_DATA);
-        offset = OFFSET_LOG_DATA + old_value_.size + sizeof(int);
+        old_value_.Deserialize(src + offset);
+        offset += old_value_.size + sizeof(int);
 
 
         update_rid_ = *reinterpret_cast<const Rid*>(src + offset);
         offset += sizeof(Rid);
+
         table_name_size_ = *reinterpret_cast<const size_t*>(src + offset);
         offset += sizeof(size_t);
         table_name_ = new char[table_name_size_ + 1];

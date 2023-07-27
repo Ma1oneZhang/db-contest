@@ -185,9 +185,9 @@ public:
 					auto log = new DeleteLogRecord(txn->get_transaction_id(), txn->get_prev_lsn(), *rec, rid, tab_name_);
 					txn->set_prev_lsn(context_->log_mgr_->add_log_to_buffer(log)); 
 					// log->format_print(); 
-					if (context_->txn_->get_txn_mode() == true) { //多条事务才刷, 单条事务会跟上commit, 不需要额外刷一次盘
-						context_->log_mgr_->flush_log_to_disk(txn->get_transaction_id());
-					}
+					// if (context_->txn_->get_txn_mode() == true) { //多条事务才刷, 单条事务会跟上commit, 不需要额外刷一次盘
+					context_->log_mgr_->flush_log_to_disk(txn->get_transaction_id());
+					// }
 				}
 			}
 		}

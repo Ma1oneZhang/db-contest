@@ -49,6 +49,8 @@ Transaction *TransactionManager::begin(Transaction *txn, LogManager *log_manager
 		// assert(txn->get_prev_lsn() == INVALID_LSN); 
 		auto log = new BeginLogRecord(new_txn->get_transaction_id(), new_txn->get_prev_lsn()); 
 		new_txn->set_prev_lsn(log_manager->add_log_to_buffer(log));
+		log_manager->flush_log_to_disk(new_txn->get_transaction_id()); //刷新磁盘
+		log_manager->set_txn2string(new_txn->get_transaction_id()); //添加映射
 	}
 	return new_txn;
 }
@@ -85,6 +87,10 @@ void TransactionManager::commit(Transaction *txn, LogManager *log_manager) {
 		auto log = CommitLogRecord(txn->get_transaction_id(), txn->get_prev_lsn());
 		txn->set_prev_lsn(log_manager->add_log_to_buffer(&log));
 		log_manager->flush_log_to_disk(txn->get_transaction_id()); //刷新磁盘
+
+	}
+	for (auto lock : *lock_set) {
+		sm_manager_->get_bpm()->flush_all_pages(lock.fd_); 
 	}
 	lock_set->clear();
 }
@@ -132,6 +138,9 @@ void TransactionManager::abort(Transaction *txn, LogManager *log_manager) {
 		auto log = AbortLogRecord(txn->get_transaction_id(), txn->get_prev_lsn()); 
 		txn->set_prev_lsn(log_manager->add_log_to_buffer(&log)); 
 		log_manager->flush_log_to_disk(txn->get_transaction_id()); 
+	}
+	for (auto lock : *lock_set) {
+		sm_manager_->get_bpm()->flush_all_pages(lock.fd_); 
 	}
 	lock_set->clear();
 }

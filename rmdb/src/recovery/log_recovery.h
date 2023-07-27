@@ -29,6 +29,9 @@ public:
 };
 
 struct LogNode {
+    txn_id_t txn_;
+    lsn_t lsn_; 
+    lsn_t prev_lsn_;  
     LogType type; 
     char* tab_name_; 
     Rid rid_; 
@@ -47,6 +50,8 @@ public:
 
     void analyze();
     void redo();
+    void undo_txn(lsn_t txn);
+
     void undo();
     void get_logs(std::string file_name);
 
@@ -58,4 +63,7 @@ private:
     TransactionManager* txn_manager_; 
     std::vector<LogNode> logs; 
     std::map<txn_id_t, int> active_txn; 
+    
+    std::map<lsn_t, int> lsn2log_id; //lsn对应的LogNode数据位置
+    std::map<txn_id_t, lsn_t> last_lsn; //每个事务最后一个对应的lsn
 };

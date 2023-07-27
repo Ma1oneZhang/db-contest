@@ -103,9 +103,9 @@ public:
 				auto log = new InsertLogRecord(txn->get_transaction_id(), txn->get_prev_lsn(), rec, rid_, tab_name_);
 				txn->set_prev_lsn(context_->log_mgr_->add_log_to_buffer(log)); 
 				log->format_print(); 
-				if (context_->txn_->get_txn_mode() == true) {
-					context_->log_mgr_->flush_log_to_disk(txn->get_transaction_id());
-				}
+				// if (context_->txn_->get_txn_mode() == true) {
+				context_->log_mgr_->flush_log_to_disk(txn->get_transaction_id());
+				// }
 			}
 		}
 		return nullptr;
