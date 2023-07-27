@@ -67,9 +67,14 @@ public:
 	int get_file_fd(const std::string &file_name);
 
 	/*日志操作*/
-	int read_log(char *log_data, int size, int offset);
+	int read_undo_pair(char *log_data, int size, int offset);
+	void write_undo_pair(char *log_data, int size);
 
+	int read_log(char *log_data, int size, int offset);
 	void write_log(char *log_data, int size);
+
+	void write_log(char *log_data, int size, std::string file_name);
+	int read_log(char *log_data, int size, int offset, std::string file_name);
 
 	void SetLogFd(int log_fd) { log_fd_ = log_fd; }
 
@@ -97,7 +102,10 @@ private:
 	std::unordered_map<int, std::string> fd2path_;//<Page fd,Page文件磁盘路径>哈希表
 
 	int log_fd_ = -1;                           // WAL日志文件的文件句柄，默认为-1，代表未打开日志文件
+	int undo_pair_fd_ = -1;                     
 	std::atomic<page_id_t> fd2pageno_[MAX_FD]{};// 文件中已经分配的页面个数，初始值为0
 	std::vector<bool> openList_;
 	std::unordered_map<int, std::mutex> fd_latch_;
+	std::unordered_map<std::string, int> log_file2fd_; 
+	std::unordered_map<std::string, int> undo_path2fd_; 
 };

@@ -179,3 +179,8 @@ class TransactionError : public RMDBError {
 public:
 	TransactionError(const std::string &msg) : RMDBError(msg) {}
 };
+
+class UndoError : public RMDBError {
+public:
+	UndoError(const std::string &msg) : RMDBError(msg) {}
+};

@@ -77,7 +77,7 @@ public:
 		txn_manager = std::make_unique<TransactionManager>(lock_manager.get(), sm_manager.get());
 		ql_manager = std::make_unique<QlManager>(sm_manager.get(), txn_manager.get());
 		log_manager = std::make_unique<LogManager>(disk_manager.get());
-		recovery = std::make_unique<RecoveryManager>(disk_manager.get(), buffer_pool_manager.get(), sm_manager.get());
+		recovery = std::make_unique<RecoveryManager>(disk_manager.get(), buffer_pool_manager.get(), sm_manager.get(), txn_manager.get());
 		planner = std::make_unique<Planner>(sm_manager.get());
 		optimizer = std::make_unique<Optimizer>(sm_manager.get(), planner.get());
 		portal = std::make_unique<Portal>(sm_manager.get());
@@ -113,7 +113,7 @@ public:
 
 void Test::sigint_handler(int signo) {
 	should_exit = true;
-	log_manager->flush_log_to_disk();
+	// log_manager->flush_log_to_disk();
 	std::cout << "The Server receive Crtl+C, will been closed\n";
 	longjmp(jmpbuf, 1);
 }

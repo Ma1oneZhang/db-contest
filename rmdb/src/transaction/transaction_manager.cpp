@@ -9,13 +9,17 @@ MERCHANTABILITY OR FIT FOR A PARTICULAR PURPOSE.
 See the Mulan PSL v2 for more details. */
 
 #include "transaction_manager.h"
+#include "common/config.h"
 #include "common/context.h"
 #include "errors.h"
 #include "execution/executor_delete.h"
 #include "record/rm_file_handle.h"
+#include "recovery/log_manager.h"
+#include "storage/buffer_pool_manager.h"
 #include "system/sm_manager.h"
 #include "transaction/transaction.h"
 #include "transaction/txn_defs.h"
+#include "defs.h"
 
 std::unordered_map<txn_id_t, Transaction *> TransactionManager::txn_map = {};
 
@@ -38,6 +42,12 @@ Transaction *TransactionManager::begin(Transaction *txn, LogManager *log_manager
 	new_txn->set_start_ts(next_timestamp_++);
 	new_txn->set_state(TransactionState::DEFAULT);
 	txn_map[txn_id] = new_txn;
+
+	if (log_manager->get_enable_logging()) {
+		// assert(txn->get_prev_lsn() == INVALID_LSN); 
+		auto log = new BeginLogRecord(new_txn->get_transaction_id(), new_txn->get_prev_lsn()); 
+		new_txn->set_prev_lsn(log_manager->add_log_to_buffer(log));
+	}
 	return new_txn;
 }
 
@@ -65,9 +75,15 @@ void TransactionManager::commit(Transaction *txn, LogManager *log_manager) {
 	}
 	// clean related resource
 	write_set->clear();
-	lock_set->clear();
 	// todo: flush log file to disk
 	// update the txn status
+
+	if (log_manager->get_enable_logging()) {
+		auto log = CommitLogRecord(txn->get_transaction_id(), txn->get_prev_lsn());
+		txn->set_prev_lsn(log_manager->add_log_to_buffer(&log));
+		log_manager->flush_log_to_disk(txn->get_transaction_id()); //刷新磁盘
+	}
+	lock_set->clear();
 }
 
 /**
@@ -109,6 +125,11 @@ void TransactionManager::abort(Transaction *txn, LogManager *log_manager) {
 	write_set->clear();
 	lock_set->clear();
 	// todo: flush log file to disk
+	if (log_manager->get_enable_logging()) {
+		auto log = AbortLogRecord(txn->get_transaction_id(), txn->get_prev_lsn()); 
+		txn->set_prev_lsn(log_manager->add_log_to_buffer(&log)); 
+		log_manager->flush_log_to_disk(txn->get_transaction_id()); 
+	}
 }
 // insert rollback is delete
 void TransactionManager::rollback_insert(const std::string &tab_name_, const Rid &rid, Transaction *txn) {

@@ -127,6 +127,8 @@ public:
 			}
 			case PORTAL_CMD_UTILITY: {
 				ql->run_cmd_utility(portal->plan, txn_id, context);
+				context->log_mgr_->set_txn2string(context->txn_->get_transaction_id()); //添加映射
+				context->log_mgr_->flush_log_to_disk(context->txn_->get_transaction_id());
 				break;
 			}
 			default: {

@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "index/ix.h"
 #include "index/ix_index_handle.h"
 #include "record/rm_defs.h"
+#include "recovery/log_manager.h"
 #include "system/sm.h"
 #include "system/sm_meta.h"
 #include <memory>
@@ -95,6 +96,16 @@ public:
 			// add it to the deleted_records
 			WriteRecord *deleteRecord = new WriteRecord{WType::INSERT_TUPLE, tab_name_, rid_};
 			context_->txn_->append_write_record(deleteRecord);
+
+			auto &txn = context_->txn_; 
+			if (context_->log_mgr_->get_enable_logging()) {
+				auto log = new InsertLogRecord(txn->get_transaction_id(), txn->get_prev_lsn(), rec, rid_, tab_name_);
+				txn->set_prev_lsn(context_->log_mgr_->add_log_to_buffer(log)); 
+				log->format_print(); 
+				if (context_->txn_->get_txn_mode() == true) {
+					context_->log_mgr_->flush_log_to_disk(txn->get_transaction_id());
+				}
+			}
 		}
 		return nullptr;
 	}

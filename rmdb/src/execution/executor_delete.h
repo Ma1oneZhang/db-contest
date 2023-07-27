@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "executor_abstract.h"
 #include "index/ix.h"
 #include "index/ix_index_handle.h"
+#include "recovery/log_manager.h"
 #include "system/sm.h"
 #include "system/sm_meta.h"
 #include "transaction/txn_defs.h"
@@ -178,6 +179,15 @@ public:
 				// add it to the deleted_records
 				WriteRecord *deleteRecord = new WriteRecord{WType::DELETE_TUPLE, tab_name_, rid, *rec};
 				context_->txn_->append_write_record(deleteRecord);
+				auto &txn = context_->txn_; 
+				if (context_->log_mgr_->get_enable_logging()) {
+					auto log = new DeleteLogRecord(txn->get_transaction_id(), txn->get_prev_lsn(), *rec, rid, tab_name_);
+					txn->set_prev_lsn(context_->log_mgr_->add_log_to_buffer(log)); 
+					// log->format_print(); 
+					if (context_->txn_->get_txn_mode() == true) { //多条事务才刷, 单条事务会跟上commit, 不需要额外刷一次盘
+						context_->log_mgr_->flush_log_to_disk(txn->get_transaction_id());
+					}
+				}
 			}
 		}
 		is_executed = true;

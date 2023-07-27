@@ -11,13 +11,16 @@ See the Mulan PSL v2 for more details. */
 #include "storage/disk_manager.h"
 
 #include <assert.h>// for assert
+#include <bits/types/FILE.h>
 #include <cerrno>
 #include <mutex>
 #include <string.h>  // for memset
+#include <string>
 #include <sys/stat.h>// for stat
 #include <sys/types.h>
 #include <unistd.h>// for lseek
 
+#include "common/config.h"
 #include "defs.h"
 #include "errors.h"
 #include <utils/log.h>
@@ -267,3 +270,107 @@ void DiskManager::write_log(char *log_data, int size) {
 		throw UnixError();
 	}
 }
+
+/**
+ * @description:  读取日志文件内容
+ * @return {int} 返回读取的数据量，若为-1说明读取数据的起始位置超过了文件大小
+ * @param {char} *log_data 读取内容到log_data中
+ * @param {int} size 向前读取数据得大小
+ * @param {int} offset 从后往前的offset 0代表文件末尾
+ */
+int DiskManager::read_log(char *log_data, int size, int offset, std::string file_name) {
+	int log_fd; 
+	if (!path2fd_.count(file_name)) {
+		if (!is_file(file_name)) {
+			throw FileNotFoundError(file_name); 
+		}
+		log_fd = open_file(file_name); 
+	} else {
+		log_fd = path2fd_[file_name]; 
+	}
+
+	int file_size = get_file_size(file_name);
+	offset = file_size - offset - size; //当前数据所在得位置 
+	if (offset > file_size) {
+		return -1;
+	}
+
+	size = std::min(size, file_size - offset);
+	if (size == 0) return 0;
+	lseek(log_fd, offset, SEEK_SET);
+	ssize_t bytes_read = read(log_fd, log_data, size);
+	assert(bytes_read == size);
+	return bytes_read;
+}
+
+
+/**
+ * @description: 写日志内容
+ * @param {char} *log_data 要写入的日志内容
+ * @param {int} size 要写入的内容大小
+ * @param {std::string} file_name 要写入的文件名
+ */
+
+void DiskManager::write_log(char *log_data, int size, std::string file_name) {
+	int log_fd; 
+	if (!path2fd_.count(file_name)) { 
+		if (!is_file(file_name)) {
+			create_file(file_name);
+		}
+		log_fd = open_file(file_name); 
+	} else {
+		log_fd = path2fd_[file_name]; 
+	}
+	// write from the file_end
+	lseek(log_fd, 0, SEEK_END);
+	ssize_t bytes_write = write(log_fd, log_data, size);
+	if (bytes_write != size) {
+		throw UnixError();
+	}
+}
+
+
+void DiskManager::write_undo_pair(char *log_data, int size) {
+	int log_fd; 
+	if (!path2fd_.count(UNDO_PAIR_FILE_NAME)) { 
+		if (!is_file(UNDO_PAIR_FILE_NAME)) {
+			create_file(UNDO_PAIR_FILE_NAME);
+		}
+		log_fd = open_file(UNDO_PAIR_FILE_NAME); 
+	} else {
+		log_fd = path2fd_[UNDO_PAIR_FILE_NAME]; 
+	}
+
+	// write from the file_end
+	lseek(log_fd, 0, SEEK_END);
+	ssize_t bytes_write = write(log_fd, log_data, size);
+	if (bytes_write != size) {
+		throw UnixError();
+	}
+}
+
+
+int DiskManager::read_undo_pair(char *log_data, int size, int offset) {
+	int log_fd; 
+	if (!path2fd_.count(UNDO_PAIR_FILE_NAME)) { 
+		if (!is_file(UNDO_PAIR_FILE_NAME)) {
+			create_file(UNDO_PAIR_FILE_NAME);
+		}
+		log_fd = open_file(UNDO_PAIR_FILE_NAME); 
+	} else {
+		log_fd = path2fd_[UNDO_PAIR_FILE_NAME]; 
+	}
+
+	int file_size = get_file_size(UNDO_PAIR_FILE_NAME);
+	if (offset > file_size) {
+		return -1;
+	}
+
+	size = std::min(size, file_size - offset);
+	if (size == 0) return 0;
+	lseek(log_fd, offset, SEEK_SET);
+	ssize_t bytes_read = read(log_fd, log_data, size);
+	assert(bytes_read == size);
+	return bytes_read;
+}
+

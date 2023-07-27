@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "executor_abstract.h"
 #include "index/ix.h"
 #include "record/rm_defs.h"
+#include "recovery/log_manager.h"
 #include "system/sm.h"
 #include "transaction/txn_defs.h"
 #include <cstring>
@@ -228,11 +229,25 @@ public:
 				}
 
 				//更新事务
-				if (context_->txn_->get_txn_mode()) {
+				if (context_->txn_->get_state() == TransactionState::DEFAULT) {
 						auto delete_record = RmRecord(original_records_.back()->size);
 						memcpy(delete_record.data, original_records_.back()->data, original_records_.back()->size); //复制执行的命令
 						auto write_record = new WriteRecord(WType::UPDATE_TUPLE, tab_name_, scan->rid(), std::move(delete_record));
 						context_->txn_->append_write_record(write_record); 
+
+						if (context_->log_mgr_->get_enable_logging()) {
+							auto &txn = context_->txn_; 
+							
+							auto rid = scan->rid(); 
+							auto &new_rec = *rec; 
+							auto &old_rec = *original_records_.back(); 
+							auto log = UpdateLogRecord(txn->get_transaction_id(), txn->get_prev_lsn(), new_rec, old_rec, rid, tab_name_); 
+							txn->set_prev_lsn(context_->log_mgr_->add_log_to_buffer(&log)); //用完即释放
+							log.format_print(); 
+							if (context_->txn_->get_txn_mode() == true) {
+								context_->log_mgr_->flush_log_to_disk(txn->get_transaction_id());
+							}
+						}
 				}
 				updated_records_.emplace_back(std::move(rec));
 				rids.push_back(scan->rid());
