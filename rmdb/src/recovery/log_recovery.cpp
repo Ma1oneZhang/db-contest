@@ -12,7 +12,9 @@ See the Mulan PSL v2 for more details. */
 #include "common/config.h"
 #include "errors.h"
 #include "recovery/log_manager.h"
+#include <algorithm>
 #include <cassert>
+#include <cstddef>
 #include <iostream>
 #include <istream>
 #include <memory>
@@ -20,6 +22,108 @@ See the Mulan PSL v2 for more details. */
 #include <fstream>
 #include <regex.h>
 #include <string>
+
+void RecoveryManager::get_logs(std::string file_name) {
+    logs.clear(); 
+
+    LogRecord log_rec;
+    int offset = 0;
+    int tot_len = 20;  
+    // offset += log_rec.log_tot_len_; 
+    if (file_name != LOG_FILE_NAME) {
+        while (disk_manager_->read_log_front(buffer_.buffer_, tot_len, offset, file_name) > 0) {
+            log_rec.deserialize(buffer_.buffer_); //获取头文件的数据
+            switch (log_rec.log_type_) {
+                case LogType::INSERT: {
+                    auto x = InsertLogRecord(); 
+                    x.deserialize(buffer_.buffer_); 
+                    logs.push_back({std::move(x.log_type_), std::move(x.table_name_), std::move(x.rid_), std::move(x.insert_value_)}); 
+                }break; 
+                case LogType::DELETE: {
+                    auto x = DeleteLogRecord(); 
+                    x.deserialize(buffer_.buffer_); 
+                    logs.push_back({std::move(x.log_type_), std::move(x.table_name_), std::move(x.rid_), std::move(x.delete_value_)}); 
+                }break;
+                case LogType::UPDATE: {
+                    auto x = UpdateLogRecord(); 
+                    x.deserialize(buffer_.buffer_); 
+                    logs.push_back({std::move(x.log_type_), std::move(x.table_name_), std::move(x.update_rid_), std::move(x.old_value_)}); 
+
+                }break; 
+                case LogType::begin: {
+                    auto x = BeginLogRecord(); 
+                    x.deserialize(buffer_.buffer_); 
+                    logs.push_back({std::move(x.log_type_)}); 
+
+                }break;
+                case LogType::commit: {
+                    auto x = CommitLogRecord(); 
+                    x.deserialize(buffer_.buffer_);      
+                    logs.push_back({std::move(x.log_type_)}); 
+
+                }break;
+                case LogType::ABORT: {
+                    auto x = AbortLogRecord(); 
+                    x.deserialize(buffer_.buffer_); 
+                    logs.push_back({std::move(x.log_type_)}); 
+                }break;
+                default: { //abort, commit
+                    // throw UndoError("多出的 ABORT COMMIT类型"); 
+                }break; 
+            }
+
+            offset += log_rec.log_tot_len_; //更新到下一个偏移量
+            tot_len = log_rec.log_tot_len_;  //获取整体长度
+        }
+    } 
+    // else {
+    //     while (disk_manager_->read_log(buffer_.buffer_, tot_len, offset) > 0) {
+    //         log_rec.deserialize(buffer_.buffer_); //获取头文件的数据
+    //         switch (log_rec.log_type_) {
+    //             case LogType::INSERT: {
+    //                 auto x = InsertLogRecord(); 
+    //                 x.deserialize(buffer_.buffer_); 
+    //                 logs.push_back({std::move(x.log_type_), std::move(x.table_name_), std::move(x.rid_), std::move(x.insert_value_)}); 
+    //             }break; 
+    //             case LogType::DELETE: {
+    //                 auto x = DeleteLogRecord(); 
+    //                 x.deserialize(buffer_.buffer_); 
+    //                 logs.push_back({std::move(x.log_type_), std::move(x.table_name_), std::move(x.rid_), std::move(x.delete_value_)}); 
+    //             }break;
+    //             case LogType::UPDATE: {
+    //                 auto x = UpdateLogRecord(); 
+    //                 x.deserialize(buffer_.buffer_); 
+    //                 logs.push_back({std::move(x.log_type_), std::move(x.table_name_), std::move(x.update_rid_), std::move(x.old_value_)}); 
+
+    //             }break; 
+    //             case LogType::begin: {
+    //                 auto x = BeginLogRecord(); 
+    //                 x.deserialize(buffer_.buffer_); 
+    //                 logs.push_back({std::move(x.log_type_)}); 
+
+    //             }break;
+    //             case LogType::commit: {
+    //                 auto x = CommitLogRecord(); 
+    //                 x.deserialize(buffer_.buffer_);      
+    //                 logs.push_back({std::move(x.log_type_)}); 
+
+    //             }break;
+    //             case LogType::ABORT: {
+    //                 auto x = AbortLogRecord(); 
+    //                 x.deserialize(buffer_.buffer_); 
+    //                 logs.push_back({std::move(x.log_type_)}); 
+    //             }break;
+    //             default: { //abort, commit
+    //                 // throw UndoError("多出的 ABORT COMMIT类型"); 
+    //             }break; 
+    //         }
+
+    //         offset += log_rec.log_tot_len_; //更新到下一个偏移量
+    //         tot_len = log_rec.log_tot_len_;  //获取整体长度
+    //     }
+    // }
+}
+
 
 /**
  * @description: analyze阶段，需要获得脏页表（DPT）和未完成的事务列表（ATT）
@@ -99,56 +203,27 @@ void RecoveryManager::redo() {
  * @description: 回滚未完成的事务
  */
 void RecoveryManager::undo() {
-    for (auto [txn, log_len]: active_txn) {
-        auto file_name = "undo_recovery_" + std::to_string(txn) + ".log"; 
-        buffer_.offset_ = 0; 
-        bool is_first = true; 
-        while (disk_manager_->read_log(buffer_.buffer_, log_len, buffer_.offset_, file_name) > 0)
-        {
-            LogRecord log_rec; 
-            log_rec.deserialize(buffer_.buffer_); 
-            if (is_first) {
-                is_first = false; 
-                if (log_rec.log_type_ == LogType::commit //事务已经完成推送
-                    || log_rec.log_type_ == LogType::ABORT //事务已经完成终端
-                    || log_rec.log_type_ == LogType::begin) { //当前事务没有东西*/
-                    break; 
-                }
+    std::vector<txn_id_t> txns; 
+    for (auto [txn, _] : active_txn) txns.push_back(txn); 
+    for (auto txn : txns) {
+        std::string file_name = "undo_recovery_" + std::to_string(txn) + ".log"; 
+        get_logs(file_name);
+        if (logs.back().type == LogType::commit) continue;  //如果当前事务已经提交则不需要undo
+        //其他的都需要undo
+        std::reverse(logs.begin(), logs.end()); 
+        for (auto log : logs) {
+            switch (log.type) {
+                case LogType::INSERT:
+                    txn_manager_->rollback_insert(log.tab_name_, log.rid_, nullptr);
+                    break;
+                case LogType::DELETE:
+                    txn_manager_->rollback_delete(log.tab_name_, log.rid_, log.value_, nullptr);
+                    break;
+                case LogType::UPDATE:
+                    txn_manager_->rollback_update(log.tab_name_, log.rid_, log.value_, nullptr);
+                default:
+                    break;
             }
-
-            //当前需要undo
-            switch (log_rec.log_type_) {
-                case LogType::INSERT: {
-                    auto x = InsertLogRecord(); 
-                    x.deserialize(buffer_.buffer_); 
-                    txn_manager_->rollback_insert(x.table_name_, x.rid_, nullptr); 
-                }break; 
-                case LogType::DELETE: {
-                    auto x = DeleteLogRecord(); 
-                    x.deserialize(buffer_.buffer_);
-                    txn_manager_->rollback_delete(x.table_name_, x.rid_, x.delete_value_, nullptr) ;
-                }break;
-                case LogType::UPDATE: {
-                    auto x = UpdateLogRecord(); 
-                    x.deserialize(buffer_.buffer_); 
-                    txn_manager_->rollback_update(x.table_name_, x.update_rid_, x.old_value_, nullptr);
-                }break; 
-                case LogType::begin: {
-
-                }break;
-                default: { //abort, commit
-                    // throw UndoError("多出的 ABORT COMMIT类型"); 
-                }break; 
-                
-            }
-            //更新offset
-            buffer_.offset_ += log_len; 
-            log_len = log_rec.log_tot_len_; 
-
-            //收尾工作, 删除所有的日志文件
-            // auto &path2fd = sm_manager_.
-        }  
-        disk_manager_->destroy_file(file_name); 
+        }
     }
-    std::cout << "undo compllite\n"; 
 }

@@ -75,6 +75,7 @@ public:
 
 	void write_log(char *log_data, int size, std::string file_name);
 	int read_log(char *log_data, int size, int offset, std::string file_name);
+	int read_log_front(char *log_data, int size, int offset, std::string file_name);
 
 	void SetLogFd(int log_fd) { log_fd_ = log_fd; }
 

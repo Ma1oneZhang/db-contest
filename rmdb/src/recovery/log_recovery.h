@@ -11,7 +11,9 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include <map>
+#include <memory>
 #include <unordered_map>
+#include "defs.h"
 #include "log_manager.h"
 #include "common/config.h"
 #include "storage/disk_manager.h"
@@ -26,6 +28,14 @@ public:
     std::vector<lsn_t> redo_logs_;   // 在该page上需要redo的操作的lsn
 };
 
+struct LogNode {
+    LogType type; 
+    char* tab_name_; 
+    Rid rid_; 
+    RmRecord value_;
+    RmRecord new_value_;
+};
+
 class RecoveryManager {
 public:
     RecoveryManager(DiskManager* disk_manager, BufferPoolManager* buffer_pool_manager, SmManager* sm_manager, TransactionManager* txn_manager) {
@@ -38,11 +48,14 @@ public:
     void analyze();
     void redo();
     void undo();
+    void get_logs(std::string file_name);
+
 private:
     LogBuffer buffer_;                                              // 读入日志
     DiskManager* disk_manager_;                                     // 用来读写文件
     BufferPoolManager* buffer_pool_manager_;                        // 对页面进行读写
     SmManager* sm_manager_;                                         // 访问数据库元数据
     TransactionManager* txn_manager_; 
+    std::vector<LogNode> logs; 
     std::map<txn_id_t, int> active_txn; 
 };

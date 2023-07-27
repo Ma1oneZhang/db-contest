@@ -123,13 +123,13 @@ void TransactionManager::abort(Transaction *txn, LogManager *log_manager) {
 	}
 	// clean related resource
 	write_set->clear();
-	lock_set->clear();
 	// todo: flush log file to disk
 	if (log_manager->get_enable_logging()) {
 		auto log = AbortLogRecord(txn->get_transaction_id(), txn->get_prev_lsn()); 
 		txn->set_prev_lsn(log_manager->add_log_to_buffer(&log)); 
 		log_manager->flush_log_to_disk(txn->get_transaction_id()); 
 	}
+	lock_set->clear();
 }
 // insert rollback is delete
 void TransactionManager::rollback_insert(const std::string &tab_name_, const Rid &rid, Transaction *txn) {

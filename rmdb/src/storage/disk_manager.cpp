@@ -252,6 +252,29 @@ int DiskManager::read_log(char *log_data, int size, int offset) {
 	return bytes_read;
 }
 
+int DiskManager::read_log_front(char *log_data, int size, int offset, std::string file_name) {
+	int log_fd; 
+	if (!path2fd_.count(file_name)) {
+		if (!is_file(file_name)) {
+			throw FileNotFoundError(file_name); 
+		}
+		log_fd = open_file(file_name); 
+	} else {
+		log_fd = path2fd_[file_name]; 
+	}
+
+	int file_size = get_file_size(file_name);
+	if (offset > file_size) {
+		return -1;
+	}
+	size = std::min(size, file_size - offset);
+	if (size == 0) return 0;
+	lseek(log_fd, offset, SEEK_SET);
+	ssize_t bytes_read = read(log_fd, log_data, size);
+	assert(bytes_read == size);
+	return bytes_read;
+}
+
 
 /**
  * @description: 写日志内容
