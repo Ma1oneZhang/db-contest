@@ -11,7 +11,9 @@ See the Mulan PSL v2 for more details. */
 #include "sm_manager.h"
 
 #include <cstddef>
+#include <cstring>
 #include <ostream>
+#include <sstream>
 #include <sys/stat.h>
 #include <unistd.h>
 
@@ -21,6 +23,7 @@ See the Mulan PSL v2 for more details. */
 #include <vector>
 
 #include "common/config.h"
+#include "defs.h"
 #include "errors.h"
 #include "index/ix.h"
 #include "record/rm.h"
@@ -28,6 +31,7 @@ See the Mulan PSL v2 for more details. */
 #include "record/rm_scan.h"
 #include "record_printer.h"
 #include "system/sm_meta.h"
+#include "parser/parser_defs.h"
 
 /**
  * @description: 判断是否为一个文件夹
@@ -512,15 +516,4 @@ void IxIndexHandle::Draw(BufferPoolManager *bpm, const std::string &outf) {
 
 	// printf("Generate picture: build/%s/%s\n", TEST_DB_NAME.c_str(), png_name.c_str());
 	printf("Generate picture: %s\n", png_name.c_str());
-}
-
-
-/**
- * @description: 读入数据
- * @param {string&} file_path 数据的路径
- * @param {string&} tab_name 表名称
- * @param {Context*} context
- */
-void SmManager::load_data(const std::string& file_path, const std::string& tab_name, Context* context) {
-
 }

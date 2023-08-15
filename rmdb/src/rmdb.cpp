@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include <setjmp.h>
 #include <signal.h>
 #include <unistd.h>
+#include <sstream>
 
 #include "analyze/analyze.h"
 #include "errors.h"
@@ -63,6 +64,67 @@ void SetTransaction(txn_id_t *txn_id, Context *context) {
 		context->txn_ = txn_manager->begin(nullptr, context->log_mgr_);
 		*txn_id = context->txn_->get_transaction_id();
 		context->txn_->set_txn_mode(false);
+	}
+}
+
+void load_data(std::shared_ptr<Plan> plan, txn_id_t txn_id, Context* context) {
+	auto x = std::dynamic_pointer_cast<OtherPlan>(plan);
+	auto file_path = x->file_path_, tab_name = x->tab_name_; 
+	// init file_path
+	std::ifstream file; 
+	std::string temp; 
+	file.open(file_path); 
+	bool is_header = true; 
+
+	//get tab col's type; 
+	auto tab_cols = sm_manager->db_.get_table(tab_name).cols;
+	std::vector<ColType> types; 
+	for (auto col : tab_cols) {
+		types.push_back(col.type); 
+	}
+
+
+	while (std::getline(file, temp)) {
+		if (is_header) {
+			is_header = false; 
+			continue; 
+		}
+
+		//拼接SQL语句
+		std::stringstream input(temp); 
+		std::vector<std::string> data;  
+		while (getline(input, temp, ',')) data.push_back(temp); 
+
+		std::string sql = "INSERT INTO " + tab_name + " VALUES("; //要插入的sql语句
+
+		for (size_t i = 0; i < data.size(); i ++ ) {
+			if (ColType::TYPE_STRING == types[i] || ColType::TYPE_DATETIME == types[i]) {
+				sql += "\'" + data[i] + "\'"; 
+			} else {
+				sql += data[i]; 
+			}
+
+			sql += i == data.size() - 1 ? ");" : ","; 
+		}
+		// std::cout << sql << '\n'; 
+
+		//执行sql语句
+		auto data_recv = sql.c_str(); 
+		YY_BUFFER_STATE buf = yy_scan_string(data_recv);
+		if (yyparse() == 0) {
+			if (ast::parse_tree != nullptr) {
+				// analyze and rewrite
+				std::shared_ptr<Query> query = analyze->do_analyze(ast::parse_tree);
+				yy_delete_buffer(buf);
+				pthread_mutex_unlock(buffer_mutex);
+				// 优化器
+				std::shared_ptr<Plan> plan = optimizer->plan_query(query, context);
+				// portal
+				std::shared_ptr<PortalStmt> portalStmt = portal->start(plan, context);
+				portal->run(portalStmt, ql_manager.get(), &txn_id, context);
+				portal->drop();
+			}
+		}
 	}
 }
 
@@ -130,10 +192,16 @@ void *client_handler(void *sock_fd) {
 					pthread_mutex_unlock(buffer_mutex);
 					// 优化器
 					std::shared_ptr<Plan> plan = optimizer->plan_query(query, context);
-					// portal
-					std::shared_ptr<PortalStmt> portalStmt = portal->start(plan, context);
-					portal->run(portalStmt, ql_manager.get(), &txn_id, context);
-					portal->drop();
+
+					//特判为load的情况
+					if (plan->tag == T_Load) {
+						load_data(plan, txn_id, context); 
+					} else {
+						// portal
+						std::shared_ptr<PortalStmt> portalStmt = portal->start(plan, context);
+						portal->run(portalStmt, ql_manager.get(), &txn_id, context);
+						portal->drop();
+					}
 				} catch (TransactionAbortException &e) {
 					// 事务需要回滚，需要把abort信息返回给客户端并写入output.txt文件中
 					std::string str = "abort\n";

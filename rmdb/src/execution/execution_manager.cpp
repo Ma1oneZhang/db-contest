@@ -83,10 +83,6 @@ void QlManager::run_cmd_utility(std::shared_ptr<Plan> plan, txn_id_t *txn_id, Co
 				*(context->offset_) = strlen(help_info);
 				break;
 			}
-			case T_Load: {
-				sm_manager_->load_data(x->file_path_, x->file_path_, context); 
-				break; 
-			}
 			case T_ShowTable: {
 				sm_manager_->show_tables(context);
 				break;

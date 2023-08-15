@@ -74,8 +74,6 @@ class SmManager {
 
     void show_index(const std::string& tab_name, Context* context);
 
-    void load_data(const std::string& file_path, const std::string& tab_name, Context* context); 
-
     void create_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context);
 
     void drop_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context);
