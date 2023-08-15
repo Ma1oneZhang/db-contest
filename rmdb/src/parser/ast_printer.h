@@ -97,6 +97,9 @@ namespace ast {
 			offset += 2;
 			if (auto x = std::dynamic_pointer_cast<Help>(node)) {
 				std::cout << "HELP\n";
+			} else if (auto x = std::dynamic_pointer_cast<Load>(node)) {
+				std::cout << "LOAD FILE PATH: " + x->file_path + "\n"; 
+				std::cout << "LOAD TABLE NAME: " + x->tab_name + "\n"; 
 			} else if (auto x = std::dynamic_pointer_cast<ShowTables>(node)) {
 				std::cout << "SHOW_TABLES\n";
 			} else if (auto x = std::dynamic_pointer_cast<CreateTable>(node)) {

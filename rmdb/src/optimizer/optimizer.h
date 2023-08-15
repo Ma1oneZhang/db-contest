@@ -37,6 +37,9 @@ class Optimizer {
         if (auto x = std::dynamic_pointer_cast<ast::Help>(query->parse)) {
             // help;
             return std::make_shared<OtherPlan>(T_Help, std::string());
+        } else if (auto x = std::dynamic_pointer_cast<ast::Load>(query->parse)) {
+            // help;
+            return std::make_shared<OtherPlan>(T_Load, x->file_path, x->tab_name);
         } else if (auto x = std::dynamic_pointer_cast<ast::ShowTables>(query->parse)) {
             // show tables;
             return std::make_shared<OtherPlan>(T_ShowTable, std::string());

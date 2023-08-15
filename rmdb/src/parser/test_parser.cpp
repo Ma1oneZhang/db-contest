@@ -41,7 +41,8 @@ int main() {
 		// "select MAX(a) from t;",
 		// "select MAX(a), MIN(b) from t;",
 		// "select * from t;",
-		"select * from t order by a,b desc, c asc limit 3;",
+		// "select * from t order by a,b desc, c asc limit 3;",
+		"LOAD ../../path/file_name.csv INTO tbName",
 		"help;",
 		"",
 	};

@@ -513,3 +513,14 @@ void IxIndexHandle::Draw(BufferPoolManager *bpm, const std::string &outf) {
 	// printf("Generate picture: build/%s/%s\n", TEST_DB_NAME.c_str(), png_name.c_str());
 	printf("Generate picture: %s\n", png_name.c_str());
 }
+
+
+/**
+ * @description: 读入数据
+ * @param {string&} file_path 数据的路径
+ * @param {string&} tab_name 表名称
+ * @param {Context*} context
+ */
+void SmManager::load_data(const std::string& file_path, const std::string& tab_name, Context* context) {
+
+}

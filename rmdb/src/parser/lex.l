@@ -36,6 +36,7 @@ white_space [ \t]+
 new_line "\r"|"\n"|"\r\n"
 sign "+"|"-"
 identifier {alpha}(_|{alpha}|{digit})*
+file_path (([a-zA-Z\._]+"/")+)?[a-zA-Z\._]+
 value_int {sign}?{digit}+
 value_float {sign}?{digit}+\.({digit}+)?
 value_string '[^']*'
@@ -94,6 +95,10 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
 "MAX" { return MAX; }
 "MIN" { return MIN; }
 "AS"  { return AS; }
+
+    /* LOAD FILE */
+"LOAD" { return LOAD; }
+
     /* operators */
 ">=" { return GEQ; }
 "<=" { return LEQ; }
@@ -103,6 +108,11 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
 {identifier} {
     yylval->sv_str = yytext;
     return IDENTIFIER;
+}
+
+{file_path} {
+    yylval->sv_str = yytext;
+    return FILE_PATH;
 }
     /* literals */
 {value_int} {
