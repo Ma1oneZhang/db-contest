@@ -87,15 +87,16 @@ extern int yydebug;
     MIN = 293,
     SUM = 294,
     AS = 295,
-    LEQ = 296,
-    NEQ = 297,
-    GEQ = 298,
-    T_EOF = 299,
-    IDENTIFIER = 300,
-    VALUE_STRING = 301,
-    VALUE_INT = 302,
-    VALUE_FLOAT = 303,
-    VALUE_BIGINT = 304
+    LOAD = 296,
+    LEQ = 297,
+    NEQ = 298,
+    GEQ = 299,
+    T_EOF = 300,
+    IDENTIFIER = 301,
+    VALUE_STRING = 302,
+    VALUE_INT = 303,
+    VALUE_FLOAT = 304,
+    VALUE_BIGINT = 305
   };
 #endif
 

@@ -34,8 +34,8 @@
 /* Undocumented macros, especially those whose name start with YY_,
    are private implementation details.  Do not rely on them.  */
 
-#ifndef YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
-# define YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
+#ifndef YY_YY_HOME_HL_SQL_DB_CONTEST_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
+# define YY_YY_HOME_HL_SQL_DB_CONTEST_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED
 /* Debug traces.  */
 #ifndef YYDEBUG
 # define YYDEBUG 0
@@ -87,15 +87,19 @@ extern int yydebug;
     MIN = 293,
     SUM = 294,
     AS = 295,
-    LEQ = 296,
-    NEQ = 297,
-    GEQ = 298,
-    T_EOF = 299,
-    IDENTIFIER = 300,
-    VALUE_STRING = 301,
-    VALUE_INT = 302,
-    VALUE_FLOAT = 303,
-    VALUE_BIGINT = 304
+    LOAD = 296,
+    SET_OUTPUT_FILE_OFF = 297,
+    LEQ = 298,
+    NEQ = 299,
+    GEQ = 300,
+    T_EOF = 301,
+    IDENTIFIER = 302,
+    VALUE_STRING = 303,
+    FILE_PATH = 304,
+    CLOUSE_STRING = 305,
+    VALUE_INT = 306,
+    VALUE_FLOAT = 307,
+    VALUE_BIGINT = 308
   };
 #endif
 
@@ -119,4 +123,4 @@ struct YYLTYPE
 
 int yyparse (void);
 
-#endif /* !YY_YY_HOME_ZIYANG_CPP_DB_CONTEST_GITHUB_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED  */
+#endif /* !YY_YY_HOME_HL_SQL_DB_CONTEST_RMDB_SRC_PARSER_YACC_TAB_H_INCLUDED  */

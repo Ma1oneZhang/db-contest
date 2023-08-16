@@ -267,3 +267,45 @@ void DiskManager::write_log(char *log_data, int size) {
 		throw UnixError();
 	}
 }
+
+/**
+ * @description: 初始化output_file 绑定文件
+ */
+void DiskManager::init_output() {
+	outfile.open("output.txt", std::ios::out | std::ios::app);
+}
+
+/**
+ * @description: 关闭output_file输出
+ */
+void DiskManager::set_output_file_off() {
+	output_file_off = true; 
+}
+
+/**
+ * @description: 将字符串写入到output_file中
+ * @param {std::string} str 要写入到output_file中的内容
+ */
+void DiskManager::write_outfile(std::string str) {
+	if (output_file_off == false) {
+		outfile << str;
+		outfile.flush(); 
+	} 
+}
+
+/**
+ * @description: 将"failure"写入到output_file中
+ */
+void DiskManager::write_outfile_failure() {
+	if (output_file_off == false) {
+		outfile << "failure\n";
+		outfile.flush(); 
+	} 
+}
+
+/**
+ * @description: 关闭outfile
+ */
+void DiskManager::close_outfile() {
+	outfile.close(); 
+}

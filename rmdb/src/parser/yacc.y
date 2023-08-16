@@ -23,12 +23,12 @@ using namespace ast;
 // keywords
 %token SHOW TABLES CREATE TABLE DROP DESC INSERT INTO VALUES DELETE FROM ASC ORDER BY
 WHERE UPDATE SET SELECT INT CHAR FLOAT INDEX AND JOIN EXIT HELP TXN_BEGIN TXN_COMMIT TXN_ABORT TXN_ROLLBACK ORDER_BY
-BIGINT DATETIME COUNT MAX MIN SUM AS
+BIGINT DATETIME COUNT MAX MIN SUM AS LOAD SET_OUTPUT_FILE_OFF
 // non-keywords
 %token LEQ NEQ GEQ T_EOF
 
 // type-specific tokens
-%token <sv_str> IDENTIFIER VALUE_STRING
+%token <sv_str> IDENTIFIER VALUE_STRING FILE_PATH CLOUSE_STRING
 %token <sv_int> VALUE_INT
 %token <sv_float> VALUE_FLOAT
 %token <sv_bigint> VALUE_BIGINT
@@ -42,7 +42,7 @@ BIGINT DATETIME COUNT MAX MIN SUM AS
 %type <sv_expr> expr
 %type <sv_val> value
 %type <sv_vals> valueList
-%type <sv_str> tbName colName LIMIT
+%type <sv_str> tbName colName LIMIT 
 %type <sv_strs> tableList colNameList
 %type <sv_col> col alias_aggregate
 %type <sv_cols> colList selector
@@ -69,6 +69,16 @@ start:
     |   HELP
     {
         parse_tree = std::make_shared<Help>();
+        YYACCEPT;
+    }
+    |   LOAD FILE_PATH INTO tbName ';'
+    {
+        parse_tree = std::make_shared<Load>($2, $4);
+        YYACCEPT;
+    }
+    |   SET_OUTPUT_FILE_OFF
+    {
+        parse_tree = std::make_shared<SetOutputFileOff>();
         YYACCEPT;
     }
     |   EXIT
@@ -103,7 +113,7 @@ txnStmt:
     {
         $$ = std::make_shared<TxnAbort>();
     }
-    | TXN_ROLLBACK
+    |   TXN_ROLLBACK
     {
         $$ = std::make_shared<TxnRollback>();
     }
@@ -346,6 +356,10 @@ setClause:
     {
         $$ = std::make_shared<SetClause>($1, $3);
     }
+    |   colName '=' CLOUSE_STRING
+    {
+        $$ = std::make_shared<SetClause>($1, $3); 
+    }
     |   colName '=' colName '+' value
     {
         $$ = std::make_shared<SetClause>($1, $5, 0);
@@ -494,6 +508,7 @@ opt_limit:
 
 tbName: IDENTIFIER;
 LIMIT: IDENTIFIER;
+
 
 colName: IDENTIFIER;
 %%

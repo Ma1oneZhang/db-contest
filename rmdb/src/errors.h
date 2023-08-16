@@ -179,3 +179,8 @@ class TransactionError : public RMDBError {
 public:
 	TransactionError(const std::string &msg) : RMDBError(msg) {}
 };
+
+class SelfOperationError : public RMDBError {
+public:
+	SelfOperationError(const std::string &msg) : RMDBError(msg) {}
+};

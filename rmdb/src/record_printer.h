@@ -86,7 +86,7 @@ public:
         
         auto str = rec_str; 
         if (str.size() > STR_WIDTH) {
-            str = str.substr(0, STR_WIDTH - 3) + "...";
+            str = str.substr(0, STR_WIDTH - 3) + "...\n";
         }
 
         std::stringstream ss;

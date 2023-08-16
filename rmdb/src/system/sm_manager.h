@@ -15,6 +15,7 @@ See the Mulan PSL v2 for more details. */
 #include "sm_defs.h"
 #include "sm_meta.h"
 #include "common/context.h"
+#include "storage/disk_manager.h"
 
 class Context;
 
@@ -52,6 +53,8 @@ class SmManager {
 
     IxManager* get_ix_manager() { return ix_manager_; }  
 
+    DiskManager* get_disk_manager() { return disk_manager_; }
+
     bool is_dir(const std::string& db_name);
 
     void create_db(const std::string& db_name);
@@ -72,7 +75,7 @@ class SmManager {
 
     void drop_table(const std::string& tab_name, Context* context);
 
-    void show_index(const std::string& tab_name, Context* context); 
+    void show_index(const std::string& tab_name, Context* context);
 
     void create_index(const std::string& tab_name, const std::vector<std::string>& col_names, Context* context);
 

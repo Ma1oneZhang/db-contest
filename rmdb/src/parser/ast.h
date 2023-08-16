@@ -55,6 +55,15 @@ namespace ast {
 	struct Help : public TreeNode {
 	};
 
+	struct SetOutputFileOff : public TreeNode {
+	};
+
+	struct Load : public TreeNode {
+		std::string file_path; 
+		std::string tab_name; 
+		Load(std::string file_path_, std::string tab_name_) : file_path(std::move(file_path_)), tab_name(std::move(tab_name_)) {}
+	};
+
 	struct ShowTables : public TreeNode {
 	};
 
@@ -173,8 +182,31 @@ namespace ast {
 		std::string col_name;
 		std::shared_ptr<Value> val;
 		bool is_self;
-		int op;
+		int op; // + --> 0, - --> 1; 
 		//  + - * /
+		SetClause(std::string col_name_, std::string str) : col_name(std::move(col_name_)) {
+			is_self = true; 
+			//只需支持 加减法, int和float类型
+			if (str.find('+') != std::string::npos) {
+				op = 0;	//加号
+				std::string val_str = str.substr(str.find('+') + 1); 
+				if (val_str.find('.') == std::string::npos) { //如果没有小数点, 则为int类型
+					val = std::make_shared<IntLit>(std::stoi(val_str)) ;
+				} else {
+					val = std::make_shared<FloatLit>(std::stof(val_str)); 
+				}
+			} else if (str.find('-') != std::string::npos) {
+				op = 1; //减号
+				std::string val_str = str.substr(str.find('-') + 1); 
+				if (val_str.find('.') == std::string::npos) {
+					val = std::make_shared<IntLit>(std::stoi(val_str)) ;
+				} else {
+					val = std::make_shared<FloatLit>(std::stof(val_str)); 
+				}
+			} else {
+				throw SelfOperationError("not expect op"); 
+			}
+		}
 		SetClause(std::string col_name_, std::shared_ptr<Value> val_) : col_name(std::move(col_name_)), val(std::move(val_)) { is_self = false; }
 		SetClause(std::string col_name_, std::shared_ptr<Value> val_, int op_) : col_name(std::move(col_name_)), val(std::move(val_)), op(op_) { is_self = true; }
 	};
