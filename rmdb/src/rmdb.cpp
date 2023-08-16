@@ -364,7 +364,7 @@ int main(int argc, char **argv) {
 		recovery->undo();
 
 		// open output file
-		disk_manager->init_output(); 
+		// disk_manager->init_output(); 
 
 		// 开启服务端，开始接受客户端连接
 		start_server();

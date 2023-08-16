@@ -32,7 +32,7 @@ class DiskManager {
 public:
 	explicit DiskManager();
 
-	~DiskManager() { close_outfile(); };
+	~DiskManager() {};
 
 	void write_page(int fd, page_id_t page_no, const char *offset, int num_bytes);
 

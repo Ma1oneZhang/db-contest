@@ -288,8 +288,9 @@ void DiskManager::set_output_file_off() {
  */
 void DiskManager::write_outfile(std::string str) {
 	if (output_file_off == false) {
+		outfile.open("output.txt", std::ios::out | std::ios::app);
 		outfile << str;
-		outfile.flush(); 
+		outfile.close(); 
 	} 
 }
 
@@ -298,8 +299,9 @@ void DiskManager::write_outfile(std::string str) {
  */
 void DiskManager::write_outfile_failure() {
 	if (output_file_off == false) {
+		outfile.open("output.txt", std::ios::out | std::ios::app);
 		outfile << "failure\n";
-		outfile.flush(); 
+		outfile.close(); 
 	} 
 }
 

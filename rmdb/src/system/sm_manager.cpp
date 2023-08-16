@@ -281,16 +281,16 @@ void SmManager::show_index(const std::string &tab_name, Context *context) {
 	auto &tab_meta = db_.get_table(tab_name);
 
 	for (auto index: tab_meta.indexes) {
-		std::string str = "";
-		str = "| " + tab_name + " | " + "unique" + " | " + "(";
+		std::string str("");
+		str += "| " + tab_name + " | unique | (";
 		for (size_t i = 0; i < index.col_num; i++) {
 			if (i >= 1) str += ",";
 			str += index.cols[i].name;
 		}
-		str = str + ")" + " |\n";
+		str += ") |\n";
 
-		printer.print_string(str, 40, context);
 		disk_manager_->write_outfile(str);
+		printer.print_string(str, 40, context);
 	}
 }
 
