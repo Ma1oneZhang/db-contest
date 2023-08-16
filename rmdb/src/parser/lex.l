@@ -37,6 +37,7 @@ new_line "\r"|"\n"|"\r\n"
 sign "+"|"-"
 identifier {alpha}(_|{alpha}|{digit})*
 file_path (([a-zA-Z\._]+"/")+)?[a-zA-Z\._]+
+clause_string {identifier}("+"|"-"){digit}+(\.({digit}+)?)?
 value_int {sign}?{digit}+
 value_float {sign}?{digit}+\.({digit}+)?
 value_string '[^']*'
@@ -116,6 +117,11 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
 {file_path} {
     yylval->sv_str = yytext;
     return FILE_PATH;
+}
+
+{clause_string} {
+    yylval->sv_str = yytext; 
+    return CLOUSE_STRING;
 }
     /* literals */
 {value_int} {

@@ -43,7 +43,11 @@ int main() {
 		// "select * from t;",
 		// "select * from t order by a,b desc, c asc limit 3;",
 		// "LOAD ../../path/file_name.csv INTO tbName",
-		"set output_file off",
+		// "set output_file off",
+		"update greade set score = score+5;",
+		"update greade set score = score-5;",
+		"update greade set score = score+5.0;",
+		"update greade set score = score-5.1234;",
 		"help;",
 		"",
 	};

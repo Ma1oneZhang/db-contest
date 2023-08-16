@@ -11,6 +11,7 @@ See the Mulan PSL v2 for more details. */
 #pragma once
 
 #include "defs.h"
+#include "parser/ast.h"
 #include "record/rm_defs.h"
 #include <cassert>
 #include <cstring>
@@ -131,6 +132,7 @@ enum class SetClauseOp {
 struct SetClause {
 	TabCol lhs;
 	Value rhs;
+	std::shared_ptr<Value> val;
 	bool is_self;
 	SetClauseOp op;
 	SetClause(TabCol lhs_, Value rhs_) {

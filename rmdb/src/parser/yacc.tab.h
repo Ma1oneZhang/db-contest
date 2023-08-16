@@ -96,9 +96,10 @@ extern int yydebug;
     IDENTIFIER = 302,
     VALUE_STRING = 303,
     FILE_PATH = 304,
-    VALUE_INT = 305,
-    VALUE_FLOAT = 306,
-    VALUE_BIGINT = 307
+    CLOUSE_STRING = 305,
+    VALUE_INT = 306,
+    VALUE_FLOAT = 307,
+    VALUE_BIGINT = 308
   };
 #endif
 

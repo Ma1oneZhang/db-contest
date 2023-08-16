@@ -28,7 +28,7 @@ BIGINT DATETIME COUNT MAX MIN SUM AS LOAD SET_OUTPUT_FILE_OFF
 %token LEQ NEQ GEQ T_EOF
 
 // type-specific tokens
-%token <sv_str> IDENTIFIER VALUE_STRING FILE_PATH
+%token <sv_str> IDENTIFIER VALUE_STRING FILE_PATH CLOUSE_STRING
 %token <sv_int> VALUE_INT
 %token <sv_float> VALUE_FLOAT
 %token <sv_bigint> VALUE_BIGINT
@@ -113,7 +113,7 @@ txnStmt:
     {
         $$ = std::make_shared<TxnAbort>();
     }
-    | TXN_ROLLBACK
+    |   TXN_ROLLBACK
     {
         $$ = std::make_shared<TxnRollback>();
     }
@@ -355,6 +355,10 @@ setClause:
         colName '=' value
     {
         $$ = std::make_shared<SetClause>($1, $3);
+    }
+    |   colName '=' CLOUSE_STRING
+    {
+        $$ = std::make_shared<SetClause>($1, $3); 
     }
     |   colName '=' colName '+' value
     {
