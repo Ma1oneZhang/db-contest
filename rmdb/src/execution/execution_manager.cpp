@@ -10,6 +10,8 @@ See the Mulan PSL v2 for more details. */
 
 #include "execution_manager.h"
 
+#include "common/config.h"
+#include "common/context.h"
 #include "defs.h"
 #include "executor_delete.h"
 #include "executor_index_scan.h"
@@ -74,6 +76,7 @@ void QlManager::run_mutli_query(std::shared_ptr<Plan> plan, Context *context) {
 	}
 }
 
+
 // 执行help; show tables; desc table; show index; begin; commit; abort;语句
 void QlManager::run_cmd_utility(std::shared_ptr<Plan> plan, txn_id_t *txn_id, Context *context) {
 	if (auto x = std::dynamic_pointer_cast<OtherPlan>(plan)) {
@@ -81,6 +84,10 @@ void QlManager::run_cmd_utility(std::shared_ptr<Plan> plan, txn_id_t *txn_id, Co
 			case T_Help: {
 				memcpy(context->data_send_ + *(context->offset_), help_info, strlen(help_info));
 				*(context->offset_) = strlen(help_info);
+				break;
+			}
+			case T_Set_output_file_off: {
+				sm_manager_->get_disk_manager()->set_output_file_off(); 
 				break;
 			}
 			case T_ShowTable: {
@@ -127,10 +134,7 @@ void QlManager::select_from(std::unique_ptr<AbstractExecutor> executorTreeRoot,
 														std::vector<TabCol> sel_cols,
 														Context *context) {
 
-	// print header into file
-	std::fstream outfile;
-	outfile.open("output.txt", std::ios::out | std::ios::app);
-	
+    auto disk_manager = sm_manager_->get_disk_manager(); 
 	//需要求的聚合函数
 	auto &aggregates = sm_manager_->db_.get_table(sel_cols.front().tab_name).get_aggregates(); 
 
@@ -191,20 +195,19 @@ void QlManager::select_from(std::unique_ptr<AbstractExecutor> executorTreeRoot,
 		}
 
 		/** 将结果输出到outputfile*/
-		outfile << "|";
+		std::string str(""); 
+		str += "|";
 		for (auto col_name : captions) {
-			outfile << ' ' << col_name << " |"; 
+			str += ' ' + col_name + " |"; 
 		}
-		outfile << "\n" 
-				<< "|";
+		str += "\n|" ;
 
 		for (auto val : column_vals) {
-			outfile << ' ' <<  val << " |"; 
+			str += ' ' +  val + " |"; 
 		}
-		outfile << "\n";
-		outfile.close();
-
-
+		str += "\n";
+		disk_manager->write_outfile(str); 
+		
 		/**  terminal output*/
 		// Print header into buffer
 		RecordPrinter rec_printer(aggregates.size());
@@ -234,11 +237,13 @@ void QlManager::select_from(std::unique_ptr<AbstractExecutor> executorTreeRoot,
 		rec_printer.print_record(captions, context);
 		rec_printer.print_separator(context);
 
-		outfile << "|";
+		std::string str(""); 
+		str += "|";
 		for (size_t i = 0; i < captions.size(); ++i) {
-			outfile << " " << captions[i] << " |";
+			str += " " + captions[i] + " |";
 		}
-		outfile << "\n";
+		str += "\n";
+		disk_manager->write_outfile(str); 
 
 		// Print records
 		size_t num_rec = 0;
@@ -267,14 +272,15 @@ void QlManager::select_from(std::unique_ptr<AbstractExecutor> executorTreeRoot,
 			// print record into buffer
 			rec_printer.print_record(columns, context);
 			// print record into file
-			outfile << "|";
+			std::string str(""); 
+			str += "|";
 			for (size_t i = 0; i < columns.size(); ++i) {
-				outfile << " " << columns[i] << " |";
+				str += " " + columns[i] + " |";
 			}
-			outfile << "\n";
+			str += "\n";
+			disk_manager->write_outfile(str); 
 			num_rec++;
 		}
-		outfile.close();
 		// Print footer into buffer
 		rec_printer.print_separator(context);
 		// Print record count into buffer

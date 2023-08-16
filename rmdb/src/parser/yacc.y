@@ -23,7 +23,7 @@ using namespace ast;
 // keywords
 %token SHOW TABLES CREATE TABLE DROP DESC INSERT INTO VALUES DELETE FROM ASC ORDER BY
 WHERE UPDATE SET SELECT INT CHAR FLOAT INDEX AND JOIN EXIT HELP TXN_BEGIN TXN_COMMIT TXN_ABORT TXN_ROLLBACK ORDER_BY
-BIGINT DATETIME COUNT MAX MIN SUM AS LOAD
+BIGINT DATETIME COUNT MAX MIN SUM AS LOAD SET_OUTPUT_FILE_OFF
 // non-keywords
 %token LEQ NEQ GEQ T_EOF
 
@@ -73,7 +73,12 @@ start:
     }
     |   LOAD FILE_PATH INTO tbName ';'
     {
-        parse_tree = std::make_shared<Load>($2, $4); 
+        parse_tree = std::make_shared<Load>($2, $4);
+        YYACCEPT;
+    }
+    |   SET_OUTPUT_FILE_OFF
+    {
+        parse_tree = std::make_shared<SetOutputFileOff>();
         YYACCEPT;
     }
     |   EXIT

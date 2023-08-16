@@ -99,6 +99,9 @@ single_op ";"|"("|")"|","|"*"|"="|">"|"<"|"."|"+"|"-"|"/"
     /* LOAD FILE */
 "LOAD" { return LOAD; }
 
+    /*set output_file off*/
+"SET OUTPUT_FILE OFF" { return SET_OUTPUT_FILE_OFF; }
+
     /* operators */
 ">=" { return GEQ; }
 "<=" { return LEQ; }

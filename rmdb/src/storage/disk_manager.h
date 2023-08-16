@@ -32,7 +32,7 @@ class DiskManager {
 public:
 	explicit DiskManager();
 
-	~DiskManager() = default;
+	~DiskManager() { close_outfile(); };
 
 	void write_page(int fd, page_id_t page_no, const char *offset, int num_bytes);
 
@@ -75,6 +75,24 @@ public:
 
 	int GetLogFd() { return log_fd_; }
 
+	/*output_file 操作*/
+
+	//open output file
+	void init_output();
+
+	void set_output_file_off();
+
+	//将 str 写入到output.txt中
+	void write_outfile(std::string str);
+
+	//将 failure 写入到output.txt中
+	void write_outfile_failure();
+
+	//关闭outfile
+	void close_outfile();
+
+
+
 	/**
      * @description: 设置文件已经分配的页面个数
      * @param {int} fd 文件对应的文件句柄
@@ -100,4 +118,8 @@ private:
 	std::atomic<page_id_t> fd2pageno_[MAX_FD]{};// 文件中已经分配的页面个数，初始值为0
 	std::vector<bool> openList_;
 	std::unordered_map<int, std::mutex> fd_latch_;
+
+	// output_file 
+	bool output_file_off {}; 
+	std::fstream outfile;
 };

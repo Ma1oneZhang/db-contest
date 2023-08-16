@@ -302,7 +302,7 @@ IxNodeHandle *IxIndexHandle::split(IxNodeHandle *node) {
 	node->set_next_leaf(new_node->get_page_no());
 	// update child father information
 	if (!node->is_leaf_page()) {
-		for (size_t i = 0; i < new_node->get_size(); i++) {
+		for (int i = 0; i < new_node->get_size(); i++) {
 			IxIndexHandle::maintain_child(new_node, i);
 		}
 	}

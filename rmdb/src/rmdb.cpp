@@ -213,10 +213,7 @@ void *client_handler(void *sock_fd) {
 					txn_manager->abort(context->txn_, log_manager.get());
 					std::cout << e.GetInfo() << std::endl;
 
-					std::fstream outfile;
-					outfile.open("output.txt", std::ios::out | std::ios::app);
-					outfile << str;
-					outfile.close();
+					disk_manager->write_outfile(str); 
 				} catch (RMDBError &e) {
 					// 遇到异常，需要打印failure到output.txt文件中，并发异常信息返回给客户端
 					std::cerr << e.what() << std::endl;
@@ -227,20 +224,14 @@ void *client_handler(void *sock_fd) {
 					offset = e.get_msg_len() + 1;
 
 					// 将报错信息写入output.txt
-					std::fstream outfile;
-					outfile.open("output.txt", std::ios::out | std::ios::app);
-					outfile << "failure\n";
-					outfile.close();
+					disk_manager->write_outfile_failure(); 
 
 					// 回滚事务
 					txn_manager->abort(context->txn_, log_manager.get());
 				}
 			}
 		} else {
-			std::fstream outfile;
-			outfile.open("output.txt", std::ios::out | std::ios::app);
-			outfile << "failure\n";
-			outfile.close();
+			disk_manager->write_outfile_failure(); 
 		}
 		if (finish_analyze == false) {
 			yy_delete_buffer(buf);
@@ -256,7 +247,7 @@ void *client_handler(void *sock_fd) {
 		if (write(fd, data_send, offset + 1) == -1) {
 			break;
 		}
-		// 如果是单挑语句，需要按照一个完整的事务来执行，所以执行完当前语句后，自动提交事务
+		// 如果是单条语句，需要按照一个完整的事务来执行，所以执行完当前语句后，自动提交事务
 		if (context->txn_->get_txn_mode() == false) {
 			txn_manager->commit(context->txn_, context->log_mgr_);
 		}
@@ -371,6 +362,9 @@ int main(int argc, char **argv) {
 		recovery->analyze();
 		recovery->redo();
 		recovery->undo();
+
+		// open output file
+		disk_manager->init_output(); 
 
 		// 开启服务端，开始接受客户端连接
 		start_server();

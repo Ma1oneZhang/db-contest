@@ -55,6 +55,9 @@ namespace ast {
 	struct Help : public TreeNode {
 	};
 
+	struct SetOutputFileOff : public TreeNode {
+	};
+
 	struct Load : public TreeNode {
 		std::string file_path; 
 		std::string tab_name; 

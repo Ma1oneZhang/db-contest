@@ -24,6 +24,7 @@ See the Mulan PSL v2 for more details. */
 typedef enum PlanTag {
 	T_Invalid = 1,
 	T_Help,
+	T_Set_output_file_off,
 	T_Load,
 	T_ShowTable,
 	T_DescTable,

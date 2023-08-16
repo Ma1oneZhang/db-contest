@@ -88,16 +88,17 @@ extern int yydebug;
     SUM = 294,
     AS = 295,
     LOAD = 296,
-    LEQ = 297,
-    NEQ = 298,
-    GEQ = 299,
-    T_EOF = 300,
-    IDENTIFIER = 301,
-    VALUE_STRING = 302,
-    FILE_PATH = 303,
-    VALUE_INT = 304,
-    VALUE_FLOAT = 305,
-    VALUE_BIGINT = 306
+    SET_OUTPUT_FILE_OFF = 297,
+    LEQ = 298,
+    NEQ = 299,
+    GEQ = 300,
+    T_EOF = 301,
+    IDENTIFIER = 302,
+    VALUE_STRING = 303,
+    FILE_PATH = 304,
+    VALUE_INT = 305,
+    VALUE_FLOAT = 306,
+    VALUE_BIGINT = 307
   };
 #endif
 

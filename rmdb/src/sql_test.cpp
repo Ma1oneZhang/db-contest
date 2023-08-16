@@ -172,10 +172,7 @@ void Test::exec_sql(const std::string &sql) {
 				txn_manager->abort(context->txn_, log_manager.get());
 				std::cout << e.GetInfo() << std::endl;
 
-				std::fstream outfile;
-				outfile.open("output.txt", std::ios::out | std::ios::app);
-				outfile << str;
-				outfile.close();
+				disk_manager->write_outfile(str);
 			} catch (RMDBError &e) {
 				// 遇到异常，需要打印failure到output.txt文件中，并发异常信息返回给客户端
 				std::cerr << e.what() << std::endl;
@@ -186,17 +183,11 @@ void Test::exec_sql(const std::string &sql) {
 				offset = e.get_msg_len() + 1;
 
 				// 将报错信息写入output.txt
-				std::fstream outfile;
-				outfile.open("output.txt", std::ios::out | std::ios::app);
-				outfile << "failure\n";
-				outfile.close();
+				disk_manager->write_outfile_failure();
 			}
 		}
 	} else {
-		std::fstream outfile;
-		outfile.open("output.txt", std::ios::out | std::ios::app);
-		outfile << "failure\n";
-		outfile.close();
+		disk_manager->write_outfile_failure(); 
 	}
 	if (finish_analyze == false) {
 		yy_delete_buffer(buf);

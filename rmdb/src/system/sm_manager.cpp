@@ -164,9 +164,9 @@ void SmManager::close_db() {
  * @param {Context*} context 
  */
 void SmManager::show_tables(Context *context) {
-	std::fstream outfile;
-	outfile.open("output.txt", std::ios::out | std::ios::app);
-	outfile << "| Tables |\n";
+	std::string outfile_content(""); //要写入到outfile中
+	outfile_content += "| Tables |\n"; 
+
 	RecordPrinter printer(1);
 	printer.print_separator(context);
 	printer.print_record({"Tables"}, context);
@@ -174,10 +174,11 @@ void SmManager::show_tables(Context *context) {
 	for (auto &entry: db_.tabs_) {
 		auto &tab = entry.second;
 		printer.print_record({tab.name}, context);
-		outfile << "| " << tab.name << " |\n";
+		outfile_content += "| " + tab.name + " |\n"; 
 	}
+
+	disk_manager_->write_outfile(outfile_content); 
 	printer.print_separator(context);
-	outfile.close();
 }
 
 /**
@@ -276,8 +277,6 @@ void SmManager::drop_table(const std::string &tab_name, Context *context) {
  */
 void SmManager::show_index(const std::string &tab_name, Context *context) {
 
-	std::fstream outfile;
-	outfile.open("output.txt", std::ios::out | std::ios::app);
 	RecordPrinter printer(1);
 	auto &tab_meta = db_.get_table(tab_name);
 
@@ -291,10 +290,8 @@ void SmManager::show_index(const std::string &tab_name, Context *context) {
 		str = str + ")" + " |\n";
 
 		printer.print_string(str, 40, context);
-		outfile << str;
+		disk_manager_->write_outfile(str);
 	}
-
-	outfile.close();
 }
 
 /**

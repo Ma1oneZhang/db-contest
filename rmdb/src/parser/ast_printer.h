@@ -100,6 +100,8 @@ namespace ast {
 			} else if (auto x = std::dynamic_pointer_cast<Load>(node)) {
 				std::cout << "LOAD FILE PATH: " + x->file_path + "\n"; 
 				std::cout << "LOAD TABLE NAME: " + x->tab_name + "\n"; 
+			} else if (auto x = std::dynamic_pointer_cast<SetOutputFileOff>(node)) {
+				std::cout << "SET OUTPUT_FILE OFF\n"; 
 			} else if (auto x = std::dynamic_pointer_cast<ShowTables>(node)) {
 				std::cout << "SHOW_TABLES\n";
 			} else if (auto x = std::dynamic_pointer_cast<CreateTable>(node)) {
