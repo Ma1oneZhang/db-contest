@@ -29,8 +29,8 @@ struct ColDef {
 class SmManager {
    public:
     DbMeta db_;             // 当前打开的数据库的元数据
-    std::unordered_map<std::string, std::unique_ptr<RmFileHandle>> fhs_;    // file name -> record file handle, 当前数据库中每张表的数据文件
-    std::unordered_map<std::string, std::unique_ptr<IxIndexHandle>> ihs_;   // file name -> index file handle, 当前数据库中每个索引的文件
+    std::map<std::string, std::unique_ptr<RmFileHandle>> fhs_;    // file name -> record file handle, 当前数据库中每张表的数据文件
+    std::map<std::string, std::unique_ptr<IxIndexHandle>> ihs_;   // file name -> index file handle, 当前数据库中每个索引的文件
    private:
     DiskManager* disk_manager_;
     BufferPoolManager* buffer_pool_manager_;
@@ -66,6 +66,8 @@ class SmManager {
     void close_db();
 
     void flush_meta();
+
+    void flush_table(const std::string& tab_name); 
 
     void show_tables(Context* context);
 

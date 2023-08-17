@@ -134,6 +134,12 @@ void SmManager::flush_meta() {
 	ofs << db_;
 }
 
+void SmManager::flush_table(const std::string& tab_name) {
+	auto fh_ = fhs_.at(tab_name).get();
+	fh_->flush_all(); 
+}
+
+
 /**
  * @description: 关闭数据库并把数据落盘
  */

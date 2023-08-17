@@ -88,6 +88,11 @@ public:
 
 	RmPageHandle fetch_page_handle(int page_no) const;
 
+	void flush_all() {
+        disk_manager_->write_page(fd_, RM_FILE_HDR_PAGE, (char *)&file_hdr_, sizeof(file_hdr_));  //更新file_hdr
+		buffer_pool_manager_->flush_all_pages(fd_); 
+	}
+
 private:
 	RmPageHandle create_page_handle();
 

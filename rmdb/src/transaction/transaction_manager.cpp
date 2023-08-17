@@ -17,6 +17,7 @@ See the Mulan PSL v2 for more details. */
 #include "transaction/transaction.h"
 #include "transaction/txn_defs.h"
 #include <mutex>
+#include <set>
 
 std::unordered_map<txn_id_t, Transaction *> TransactionManager::txn_map = {};
 
@@ -60,7 +61,27 @@ void TransactionManager::commit(Transaction *txn, LogManager *log_manager) {
 		return;
 	txn->set_state(TransactionState::COMMITTED);
 	// commit all write operations
+
+	//flush to disk
+
 	auto write_set = txn->get_write_set();
+	std::set<std::string> tab_names; 
+	for (auto write : *write_set) {
+		tab_names.insert(write->GetTableName()); 
+	}
+	for (auto tab_name : tab_names) {
+		sm_manager_->flush_table(tab_name); 
+		
+
+
+		// auto ix_manager = sm_manager_->get_ix_manager(); 
+		// for (auto  &[_, ih] : sm_manager_->ihs_) {
+		// 	ix_manager->flush_index(ih.get()); 
+		// }
+		sm_manager_->flush_meta(); 
+	}
+
+
 	// release all locks
 	auto lock_set = txn->get_lock_set();
 	for (auto lock: *lock_set) {
