@@ -55,12 +55,7 @@ private:
 		return table_col_table[{meta.tab_name, meta.name}];
 	}
 
-	void getNextBlockBuffer() {
-		buffer_vec_.clear();
-		for (size_t i = 0; i < MAX_BUFFER_SIZE && !left_->is_end(); i++, left_->nextTuple()) {
-			buffer_vec_.emplace_back(left_->Next());
-		}
-	}
+
 
 	bool checkCondition(const RmRecord *left, const RmRecord *right) {
 		for (auto &cond: fed_conds_) {
@@ -155,6 +150,13 @@ private:
 	std::vector<std::unique_ptr<RmRecord>> match_tuples;
 	std::mutex mu_of_match_tuple;
 	std::unique_ptr<ThreadPool> tp;
+
+	void getNextBlockBuffer() {
+		buffer_vec_.clear();
+		for (size_t i = 0; i < MAX_BUFFER_SIZE && !left_->is_end(); i++, left_->nextTuple()) {
+			buffer_vec_.emplace_back(left_->Next());
+		}
+	}
 	void getNextMatchVector() {
 		while (match_tuples.size() == 0 && !right_->is_end()) {
 			getNextBlockBuffer();
@@ -261,6 +263,7 @@ public:
 	void nextTuple() override {
 		current_buffer_pos++;
 		if (current_buffer_pos == (int64_t)match_tuples.size()) {
+			buffer_vec_.clear();
 			match_tuples.clear();
 			getNextMatchVector();
 			current_buffer_pos = 0;

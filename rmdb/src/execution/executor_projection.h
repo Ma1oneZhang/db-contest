@@ -16,6 +16,7 @@ See the Mulan PSL v2 for more details. */
 #include "record/rm_defs.h"
 #include "system/sm.h"
 #include <cstring>
+#include <utils/ThreadPool.h>
 #include <memory>
 
 class ProjectionExecutor : public AbstractExecutor {
@@ -24,6 +25,73 @@ private:
 	std::vector<ColMeta> cols_;             // 需要投影的字段
 	size_t len_;                            // 字段总长度
 	std::vector<size_t> sel_idxs_;
+
+
+	std::vector<std::unique_ptr<RmRecord>> buffer_vec_;// block join buffer
+	static constexpr int MAX_BUFFER_SIZE = 2048;       // block join buffer size
+	int64_t current_buffer_pos;                        // pos in the vector -1 means not exist
+	std::map<std::pair<std::string, std::string>,
+					 std::pair<bool, std::vector<ColMeta>::const_iterator>>
+		table_col_table;// 记录对应col的表名和指针
+
+	std::vector<std::unique_ptr<RmRecord>> match_tuples;
+	std::mutex mu_of_match_tuple;
+	std::unique_ptr<ThreadPool> tp;
+
+	void getNextBlockBuffer() {
+		buffer_vec_.clear();
+		for (size_t i = 0; i < MAX_BUFFER_SIZE && !prev_->is_end(); i++, prev_->nextTuple()) {
+			buffer_vec_.emplace_back(prev_->Next());
+		}
+	}
+
+	
+	void getNextMatchVector() {
+		while (match_tuples.size() == 0 && !prev_->is_end()) {
+			getNextBlockBuffer();
+			// means scan over
+			if (buffer_vec_.size() == 0) {
+				continue;
+			}
+			std::vector<std::future<void>> tasks;
+			// scan all buffer in the tuple
+			std::function<void(const std::vector<RmRecord *> left)> getNextMatchTuple =
+				[&](const std::vector<RmRecord *> left_vec) {
+					for (auto left: left_vec) {
+
+						auto prev_rec = std::make_unique<RmRecord>(*left);
+						auto &prev_cols = prev_->cols();
+						auto &project_cols = cols_;
+						auto project_rec = std::make_unique<RmRecord>(len_);
+						for (size_t i = 0; i < project_cols.size(); i++) {
+							auto prev_idx = sel_idxs_[i];
+							auto &prev_col = prev_cols[prev_idx];
+							auto &proj_col = project_cols[i];
+							memcpy(project_rec->data + proj_col.offset, prev_rec->data + prev_col.offset, prev_col.len);
+						}
+
+						mu_of_match_tuple.lock();
+						match_tuples.emplace_back(std::move(project_rec));
+						mu_of_match_tuple.unlock();
+
+					}
+				};
+
+			std::vector<RmRecord *> left_buffer;
+			for (size_t i = 0; i < buffer_vec_.size(); i++) {
+				left_buffer.push_back(buffer_vec_[i].get());
+				if (i == buffer_vec_.size() - 1 || (i % 128 == 0 && i != 0)) {
+					tasks.emplace_back(tp->submit(getNextMatchTuple, left_buffer));
+					left_buffer.clear();
+				}
+			}
+
+			// wait all task finish
+			for (auto &task: tasks) {
+				task.get();
+			}
+		}
+	}
 
 public:
 	ProjectionExecutor(std::unique_ptr<AbstractExecutor> prev, const std::vector<TabCol> &sel_cols) {
@@ -39,6 +107,11 @@ public:
 			curr_offset += col.len;
 			cols_.push_back(col);
 		}
+
+		// 5 thread
+		tp = std::make_unique<ThreadPool>(5);
+		tp->init();
+		current_buffer_pos = -1;
 		len_ = curr_offset;
 	}
 
@@ -48,28 +121,29 @@ public:
 
 	void beginTuple() override {
 		prev_->beginTuple();
+		if (prev_->is_end()) {
+			return;
+		}
+		nextTuple();
 	}
 
 	void nextTuple() override {
-		prev_->nextTuple();
+		current_buffer_pos++;
+		if (current_buffer_pos == (int64_t)match_tuples.size()) {
+			buffer_vec_.clear(); 
+			match_tuples.clear();
+			getNextMatchVector();
+			current_buffer_pos = 0;
+		}
 	}
 
+
 	bool is_end() const override {
-		return prev_->is_end();
+		return buffer_vec_.size() == 0 && prev_->is_end();
 	}
 	std::unique_ptr<RmRecord> Next() override {
 		assert(!is_end());
-		auto prev_rec = prev_->Next();
-		auto &prev_cols = prev_->cols();
-		auto &project_cols = cols_;
-		auto project_rec = std::make_unique<RmRecord>(len_);
-		for (size_t i = 0; i < project_cols.size(); i++) {
-			auto prev_idx = sel_idxs_[i];
-			auto &prev_col = prev_cols[prev_idx];
-			auto &proj_col = project_cols[i];
-			memcpy(project_rec->data + proj_col.offset, prev_rec->data + prev_col.offset, prev_col.len);
-		}
-		return project_rec;
+		return std::make_unique<RmRecord>(*match_tuples[current_buffer_pos]);
 	}
 
 	Rid &rid() override { return _abstract_rid; }
