@@ -38,14 +38,15 @@ private:
 	std::mutex mu_of_match_tuple;
 	std::unique_ptr<ThreadPool> tp;
 
-	void getNextBlockBuffer() {
-		buffer_vec_.clear();
-		for (size_t i = 0; i < MAX_BUFFER_SIZE && !prev_->is_end(); i++, prev_->nextTuple()) {
+	void inline getNextBlockBuffer() {
+		buffer_vec_.reserve(MAX_BUFFER_SIZE);
+		size_t i; 
+		for (i = 0; i < MAX_BUFFER_SIZE && !prev_->is_end(); i++, prev_->nextTuple()) {
 			buffer_vec_.emplace_back(prev_->Next());
 		}
+		if (i != MAX_BUFFER_SIZE) buffer_vec_.resize(i); 
 	}
 
-	
 	void getNextMatchVector() {
 		while (match_tuples.size() == 0 && !prev_->is_end()) {
 			getNextBlockBuffer();
@@ -53,42 +54,19 @@ private:
 			if (buffer_vec_.size() == 0) {
 				continue;
 			}
-			std::vector<std::future<void>> tasks;
-			// scan all buffer in the tuple
-			std::function<void(const std::vector<RmRecord *> left)> getNextMatchTuple =
-				[&](const std::vector<RmRecord *> left_vec) {
-					for (auto left: left_vec) {
-
-						auto prev_rec = std::make_unique<RmRecord>(*left);
-						auto &prev_cols = prev_->cols();
-						auto &project_cols = cols_;
-						auto project_rec = std::make_unique<RmRecord>(len_);
-						for (size_t i = 0; i < project_cols.size(); i++) {
-							auto prev_idx = sel_idxs_[i];
-							auto &prev_col = prev_cols[prev_idx];
-							auto &proj_col = project_cols[i];
-							memcpy(project_rec->data + proj_col.offset, prev_rec->data + prev_col.offset, prev_col.len);
-						}
-
-						mu_of_match_tuple.lock();
-						match_tuples.emplace_back(std::move(project_rec));
-						mu_of_match_tuple.unlock();
-
+			match_tuples.reserve(buffer_vec_.size()); 
+			for (auto &prev_rec : buffer_vec_) {
+					auto &prev_cols = prev_->cols();
+					auto &project_cols = cols_;
+					auto project_rec = std::make_unique<RmRecord>(len_);
+					for (size_t i = 0; i < project_cols.size(); i++) {
+						auto &prev_idx = sel_idxs_[i];
+						auto &prev_col = prev_cols[prev_idx];
+						auto &proj_col = project_cols[i];
+						memcpy(project_rec->data + proj_col.offset, prev_rec->data + prev_col.offset, prev_col.len);
 					}
-				};
-
-			std::vector<RmRecord *> left_buffer;
-			for (size_t i = 0; i < buffer_vec_.size(); i++) {
-				left_buffer.push_back(buffer_vec_[i].get());
-				if (i == buffer_vec_.size() - 1 || (i % 128 == 0 && i != 0)) {
-					tasks.emplace_back(tp->submit(getNextMatchTuple, left_buffer));
-					left_buffer.clear();
-				}
-			}
-
-			// wait all task finish
-			for (auto &task: tasks) {
-				task.get();
+				
+				match_tuples.emplace_back(std::move(project_rec)); 
 			}
 		}
 	}
@@ -130,8 +108,8 @@ public:
 	void nextTuple() override {
 		current_buffer_pos++;
 		if (current_buffer_pos == (int64_t)match_tuples.size()) {
-			buffer_vec_.clear(); 
-			match_tuples.clear();
+			buffer_vec_.clear();
+			match_tuples.clear(); 
 			getNextMatchVector();
 			current_buffer_pos = 0;
 		}

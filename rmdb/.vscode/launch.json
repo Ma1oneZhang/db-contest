@@ -9,6 +9,7 @@
       "request": "launch",
       "name": "Debug",
       "program": "${workspaceFolder}/build/bin/rmdb",
+      // "program": "${workspaceFolder}/build/bin/sql_test",
       // "program": "${workspaceFolder}/build/bin/test_parser",
       "args": [
         "test"

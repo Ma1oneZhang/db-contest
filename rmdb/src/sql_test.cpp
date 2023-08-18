@@ -108,6 +108,7 @@ public:
 	void sigint_handler(int signo); 
 	void SetTransaction(txn_id_t *txn_id, Context *context);
 	void exec_sql(const std::string &sql);
+	int cnt; 
 };
 
 
@@ -133,6 +134,8 @@ void Test::SetTransaction(txn_id_t *txn_id, Context *context) {
 
 void Test::exec_sql(const std::string &sql) {
 	auto data_recv = sql.c_str();
+	if ((++ cnt) % 1000 == 0) 
+		std::cout << cnt << '\n'; 
 
 	//初始化输出信息
 	memset(result, '\0', BUFFER_LENGTH);
