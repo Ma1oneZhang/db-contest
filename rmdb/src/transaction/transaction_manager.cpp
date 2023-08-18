@@ -65,21 +65,22 @@ void TransactionManager::commit(Transaction *txn, LogManager *log_manager) {
 	//flush to disk
 
 	auto write_set = txn->get_write_set();
-	std::set<std::string> tab_names; 
-	for (auto write : *write_set) {
-		tab_names.insert(write->GetTableName()); 
-	}
-	for (auto tab_name : tab_names) {
-		sm_manager_->flush_table(tab_name); 
+	// std::set<std::string> tab_names; 
+	// for (auto write : *write_set) {
+	// 	tab_names.insert(write->GetTableName()); 
+	// }
+	// // if (sm_manager_->ihs_.size()) exit(1); 
+	// for (auto tab_name : tab_names) {
+	// 	sm_manager_->flush_table(tab_name); 
 		
 
 
-		// auto ix_manager = sm_manager_->get_ix_manager(); 
-		// for (auto  &[_, ih] : sm_manager_->ihs_) {
-		// 	ix_manager->flush_index(ih.get()); 
-		// }
-		sm_manager_->flush_meta(); 
-	}
+	// 	// auto ix_manager = sm_manager_->get_ix_manager(); 
+	// 	// for (auto  &[_, ih] : sm_manager_->ihs_) {
+	// 	// 	ix_manager->flush_index(ih.get()); 
+	// 	// }
+	// 	sm_manager_->flush_meta(); 
+	// }
 
 
 	// release all locks

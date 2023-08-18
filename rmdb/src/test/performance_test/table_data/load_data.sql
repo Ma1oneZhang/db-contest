@@ -24,6 +24,7 @@ load ../../src/test/performance_test/table_data/orders.csv into orders;
 load ../../src/test/performance_test/table_data/order_line.csv into order_line;
 load ../../src/test/performance_test/table_data/item.csv into item;
 load ../../src/test/performance_test/table_data/stock.csv into stock;
+set ouput_file off
 select COUNT(*) as count_warehouse from warehouse;
 select COUNT(*) as count_district from district;
 select COUNT(*) as count_customer from customer;
